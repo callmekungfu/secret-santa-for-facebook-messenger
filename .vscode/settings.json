@@ -1,0 +1,4 @@
+{
+    "appService.defaultWebAppToDeploy": "/subscriptions/ea9bca67-5545-4f47-bbed-6c68b18cc2b0/resourceGroups/yonglin/providers/Microsoft.Web/sites/yonglin",
+    "appService.deploySubpath": ""
+}
