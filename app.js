@@ -13,6 +13,7 @@ var app = express();
 var debug = require('debug')('expressazure:server');
 var http = require('http');
 
+const database = require('./api/database')
 
 /**
  * Get port from environment and store in Express.
