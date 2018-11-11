@@ -1,5 +1,5 @@
 var express = require('express');
-let news    = require('../api/newsletters');
+const SubscriberModel = require('../api/newsletters');
 var router = express.Router();
 
 /* GET home page. */
@@ -9,12 +9,26 @@ router.get('/', function(req, res, next) {
 
 router.get('/contacts', (req, res) => {
   res.send({
-    hi: "yeah"
+    hi: "yeah",
+    hello: "hi"
   })
 });
 
-router.post('/news', (req, res) => {
-  
+router.post('/subscribe', (req, res) => {
+  console.log(req.body);
+  const subscriberInstance = new SubscriberModel(req.body);
+  subscriberInstance.save((err) => {
+    if (err) {
+      res.send({
+        status: 'error',
+        err
+      });
+    } else {
+      res.send({
+        status: 'success'
+      });
+    }
+  })
 })
 
 module.exports = router;
