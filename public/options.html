@@ -6,6 +6,8 @@
 
 <body>
     <form action="/optionspostback" method="get">
+        <h1>Secret Santa</h1>
+        <p>By: Yong Lin Wang</p>
         <input type="hidden" name="psid" id="psid">
         <h3>Pillows</h3>
         <input type="radio" name="pillows" value="soft" checked>Soft<br>
@@ -30,32 +32,34 @@
             js.src = "//connect.facebook.com/en_US/messenger.Extensions.js";
             fjs.parentNode.insertBefore(js, fjs);
         }(document, 'script', 'Messenger'));
-        window.extAsyncInit = function () {
+        window.extAsyncInit = () => {
             MessengerExtensions.getSupportedFeatures(function success(result) {
                 let features = result.supported_features;
-                if (features.indexOf("context") != -1) {
-                    MessengerExtensions.getContext('<YOUR_APP_ID>',
+                console.log('testing');
+                if (features.includes("context")) {
+                    MessengerExtensions.getContext('1962533450482760',
                         function success(thread_context) {
                             // success
                             document.getElementById("psid").value = thread_context.psid;
-                            // More code to follow
                         },
                         function error(err) {
+                            // error
                             console.log(err);
                         }
                     );
                 }
             }, function error(err) {
+                // error retrieving supported features
                 console.log(err);
+            });
+            document.getElementById('submitButton').addEventListener('click', () => {
+                MessengerExtensions.requestCloseBrowser(function success() {
+                    console.log("Webview closing");
+                }, function error(err) {
+                    console.log(err);
+                });
             });
         };
-        document.getElementById('submitButton').addEventListener('click', function () {
-            MessengerExtensions.requestCloseBrowser(function success() {
-                console.log("Webview closing");
-            }, function error(err) {
-                console.log(err);
-            });
-        });
     </script>
 </body>
 

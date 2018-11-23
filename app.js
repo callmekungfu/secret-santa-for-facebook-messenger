@@ -1,19 +1,3 @@
-/**
- * Copyright 2017-present, Facebook, Inc. All rights reserved.
- *
- * This source code is licensed under the license found in the
- * LICENSE file in the root directory of this source tree.
- *
- *
- * Starter Project for Messenger Platform webview Tutorial
- *
- * Use this project as the starting point for following the
- * Messenger Platform webview tutorial.
- *
- * https://blog.messengerdevelopers.com/using-the-webview-to-create-richer-bot-to-user-interactions-ed8a789523c6
- *
- */
-
 'use strict';
 
 // Imports dependencies and set up http server
@@ -41,7 +25,6 @@ module.exports = app;
 
 // Accepts POST requests at the /webhook endpoint
 app.post('/webhook', (req, res) => {
-  console.log('posted')
   // Parse the request body from the POST
   let body = req.body;
 
@@ -132,11 +115,12 @@ app.get('/optionspostback', (req, res) => {
 // Handles messages sent to the bot
 function handleMessage(sender_psid, received_message) {
   let response;
-
   if (received_message.text) {
     switch (received_message.text.replace(/[^\w\s]/gi, '').trim().toLowerCase()) {
       case "room preferences":
+        console.log('room preferences requested')
         response = setRoomPreferences(sender_psid);
+        console.log(response)
         break;
       default:
         response = {
