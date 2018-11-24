@@ -5,6 +5,7 @@ const
   request = require('request'),
   express = require('express'),
   body_parser = require('body-parser'),
+  moment = require('moment'),
   dotenv = require('dotenv').config();
 
 var app = express();
@@ -27,7 +28,7 @@ module.exports = app;
 app.post('/webhook', (req, res) => {
   // Parse the request body from the POST
   let body = req.body;
-
+  console.log(body);
   // Check the webhook event is from a Page subscription
   if (body.object === 'page') {
 
@@ -106,7 +107,7 @@ app.get('/options', (req, res) => {
 app.get('/optionspostback', (req, res) => {
   let body = req.query;
   let response = {
-    "text": `Great, I will book you a ${body.bed} bed, with ${body.pillows} pillows and a ${body.view} view.`
+    "text": `Yay! Your ${body.name} party is on its way! Here are the details: \nLocation: ${body.location}\nDate: ${moment(body.date).format('MMMM Do YYYY, h:mm a')}\nBudget: $${body.budget}\nThere are currently no friends in the party.`
   };
   res.status(200).send('Please close this window to return to the conversation thread.');
   callSendAPI(body.psid, response);
@@ -117,8 +118,7 @@ function handleMessage(sender_psid, received_message) {
   let response;
   if (received_message.text) {
     switch (received_message.text.replace(/[^\w\s]/gi, '').trim().toLowerCase()) {
-      case "room preferences":
-        console.log('room preferences requested')
+      case "create party":
         response = setRoomPreferences(sender_psid);
         console.log(response)
         break;
@@ -144,13 +144,20 @@ function setRoomPreferences(sender_psid) {
       type: "template",
       payload: {
         template_type: "button",
-        text: "OK, let's set your room preferences so I won't need to ask for them in the future.",
+        text: "Sounds good, let's get your party going! 🎉🎉",
         buttons: [{
           type: "web_url",
           url: SERVER_URL + "/options",
-          title: "Set preferences",
-          webview_height_ratio: "compact",
-          messenger_extensions: false
+          title: "Create Your Party",
+          webview_height_ratio: 'tall',
+          messenger_extensions: true
+        },
+        {
+          type: "web_url",
+          url: SERVER_URL + "/help",
+          title: "What are paries?",
+          webview_height_ratio: 'full',
+          messenger_extensions: true
         }]
       }
     }

@@ -1,25 +1,58 @@
 <html>
 
 <head>
-    <title>Choose your preferences</title>
+    <title>Create Party</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="/stylesheets/style.css">
+    <link rel="stylesheet" href="/stylesheets/core.css">
 </head>
 
 <body>
     <form action="/optionspostback" method="get">
-        <h1>Secret Santa</h1>
-        <p>By: Yong Lin Wang</p>
         <input type="hidden" name="psid" id="psid">
-        <h3>Pillows</h3>
-        <input type="radio" name="pillows" value="soft" checked>Soft<br>
-        <input type="radio" name="pillows" value="hard">Hard<br>
-        <h3>Bed</h3>
-        <input type="radio" name="bed" value="single" checked>Single<br>
-        <input type="radio" name="bed" value="double">Double<br>
-        <input type="radio" name="bed" value="twin">Twin<br>
-        <h3>View</h3>
-        <input type="radio" name="view" value="sea" checked>Sea<br>
-        <input type="radio" name="view" value="street">Street<br>
-        <input type="submit" value="Submit" id="submitButton">
+        <h3 class="weui-cells__title">Party Name</h3>
+        <div class="weui-cells">
+            <div class="weui-cell">
+                <div class="weui-cell__bd">
+                    <input class="weui-input party-name" type="text" value="Randomized Party Name" name="name" placeholder="Enter a Name">
+                </div>
+            </div>
+        </div>
+        
+        <h3 class="weui-cells__title">Details</h3>
+        <div class="weui-cells weui-cells_form">
+            <div class="weui-cell">
+                <div class="weui-cell__hd"><label class="weui-label">Location</label></div>
+                <div class="weui-cell__bd">
+                    <input class="weui-input" type="text" name="location" placeholder="Where's the party?">
+                </div>
+            </div>
+            <div class="weui-cell">
+                <div class="weui-cell__hd"><label class="weui-label">Date</label></div>
+                <div class="weui-cell__bd">
+                    <input class="weui-input" type="datetime-local" name="date" placeholder value>
+                </div>
+            </div>
+            <div class="weui-cell">
+                <div class="weui-cell__hd"><label class="weui-label">Budget</label></div>
+                <div class="weui-cell__bd">
+                    <input class="weui-input" type="number" pattern="[0-9]*" name="budget" placeholder="$">
+                </div>
+            </div>
+        </div>
+        
+        <h3 class="weui-cells__title">Note</h3>
+        <div class="weui-cells weui-cells_form">
+            <div class="weui-cell">
+                <div class="weui-cell__bd">
+                    <textarea class="weui-textarea" name="note" placeholder="Add a friendly note!" rows="3" spellcheck="true" style="z-index: auto; position: relative; line-height: 25px; font-size: 17px; transition: none 0s ease 0s; background: none 0% 0% / auto repeat scroll padding-box border-box rgb(255, 255, 255);"></textarea>
+                    <div class="weui-textarea-counter"><span>0</span>/200</div>
+                </div>
+            </div>
+        </div>
+        <div class="weui-btn-area">
+            <input class="weui-btn weui-btn_primary" type="submit" value="Submit" id="submitButton">
+        </div>
     </form>
     <script>
         (function (d, s, id) {
@@ -33,6 +66,13 @@
             fjs.parentNode.insertBefore(js, fjs);
         }(document, 'script', 'Messenger'));
         window.extAsyncInit = () => {
+            MessengerExtensions.getUserID(function success(user_ids) {
+                // User ID was successfully obtained. 
+                let psid = user_ids.psid;
+                console.log(psid);
+            }, function error(err, errorMessage) {
+                // Error handling code
+            });
             MessengerExtensions.getSupportedFeatures(function success(result) {
                 let features = result.supported_features;
                 console.log('testing');
@@ -48,9 +88,9 @@
                         }
                     );
                 }
-            }, function error(err) {
+            }, function error(err, errmsage) {
                 // error retrieving supported features
-                console.log(err);
+                console.log(err, errmsage);
             });
             document.getElementById('submitButton').addEventListener('click', () => {
                 MessengerExtensions.requestCloseBrowser(function success() {
