@@ -1,3 +1,41 @@
+body {
+    background: #eee;
+}
+
 .party-name {
     font-size: 1.8em;
+}
+
+.full-height {
+    height: 100%;
+}
+
+.flexed {
+    display: flex;
+}
+
+.inner {
+    width: 80%;
+    margin: 0 auto;
+}
+
+.v-center {
+    justify-content: center;
+    align-items: center;
+}
+
+.text-centered {
+    text-align: center;
+}
+
+img {
+    margin: 0 auto;
+}
+
+.img-responsive_50 {
+    max-width: 50%;
+}
+
+.mb-25 {
+    margin-bottom: 25px;
 }

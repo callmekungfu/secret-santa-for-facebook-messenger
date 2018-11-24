@@ -1,0 +1,61 @@
+<html>
+
+<head>
+    <title>Invitation</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="/stylesheets/style.css">
+    <link rel="stylesheet" href="/stylesheets/core.css">
+</head>
+
+<body>
+    <div class="container flexed v-center full-height">
+        <div class="inner">
+            <p class="text-centered">You are invited to...</p>
+            <h2 class="text-centered mb-25">The <span id="partyName">BBQ SECRET SANTA</span> Party!</h2>
+            <h4>The Details:</h4>
+            <ul>
+                <li>Location: CRX 5th Floor</li>
+                <li>Date: December 10th 2018 at 10 pm</li>
+                <li>Budget: $15</li>
+            </ul>
+            <h4>Please Note:</h4>
+            <p class="mb-25">Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua!</p>
+            <div class="weui-btn-area">
+                <button class="weui-btn weui-btn_primary" id="acceptInvitation">Accept Invitation!</button>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        (function (d, s, id) {
+            var js, fjs = d.getElementsByTagName(s)[0];
+            if (d.getElementById(id)) {
+                return;
+            }
+            js = d.createElement(s);
+            js.id = id;
+            js.src = "//connect.facebook.com/en_US/messenger.Extensions.js";
+            fjs.parentNode.insertBefore(js, fjs);
+        }(document, 'script', 'Messenger'));
+        window.extAsyncInit = () => {
+            MessengerExtensions.askPermission(
+                function (permission_response) {
+                    // Person grants or rejects the asked permission.
+                    let permissions = permission_response.permissions; // list of all permissions granted
+                    let isGranted = permission_response.isGranted;
+                    if (isGranted) {
+                        console.log('user granted permission');
+                    }
+
+                },
+                function (errorCode, errorMessage) {
+                    console.log(errorCode)
+                },
+                "user_profile"
+            );
+        };
+    </script>
+</body>
+
+</html>

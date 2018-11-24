@@ -1,0 +1,84 @@
+<html>
+
+<head>
+    <title>My Profile</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="/stylesheets/style.css">
+    <link rel="stylesheet" href="/stylesheets/core.css">
+</head>
+
+<body>
+    <form action="/optionspostback" method="get">
+        <input type="hidden" name="psid" id="psid">
+        <h3 class="weui-cells__title">My Wishlist</h3>
+        <div class="weui-cells weui-cells_form">
+            <div class="weui-cell">
+                <div class="weui-cell__bd">
+                    <input class="weui-input" type="text" name="wishlist_item" placeholder="Add a new item">
+                </div>
+            </div>
+        </div>
+        
+        <h3 class="weui-cells__title">Instructions</h3>
+        <div class="weui-cells weui-cells_form">
+            <div class="weui-cell">
+                <div class="weui-cell__bd">
+                    <textarea class="weui-textarea" name="note" placeholder="Add a friendly note!" rows="3" spellcheck="true" style="z-index: auto; position: relative; line-height: 25px; font-size: 17px; transition: none 0s ease 0s; background: none 0% 0% / auto repeat scroll padding-box border-box rgb(255, 255, 255);"></textarea>
+                    <div class="weui-textarea-counter"><span>0</span>/200</div>
+                </div>
+            </div>
+        </div>
+        <div class="weui-btn-area">
+            <input class="weui-btn weui-btn_primary" type="submit" value="Submit" id="submitButton">
+        </div>
+    </form>
+    <script>
+        (function (d, s, id) {
+            var js, fjs = d.getElementsByTagName(s)[0];
+            if (d.getElementById(id)) {
+                return;
+            }
+            js = d.createElement(s);
+            js.id = id;
+            js.src = "//connect.facebook.com/en_US/messenger.Extensions.js";
+            fjs.parentNode.insertBefore(js, fjs);
+        }(document, 'script', 'Messenger'));
+        window.extAsyncInit = () => {
+            MessengerExtensions.getUserID(function success(user_ids) {
+                // User ID was successfully obtained. 
+                let psid = user_ids.psid;
+                console.log(psid);
+            }, function error(err, errorMessage) {
+                // Error handling code
+            });
+            MessengerExtensions.getSupportedFeatures(function success(result) {
+                let features = result.supported_features;
+                console.log('testing');
+                if (features.includes("context")) {
+                    MessengerExtensions.getContext('1962533450482760',
+                        function success(thread_context) {
+                            // success
+                            document.getElementById("psid").value = thread_context.psid;
+                        },
+                        function error(err) {
+                            // error
+                            console.log(err);
+                        }
+                    );
+                }
+            }, function error(err, errmsage) {
+                // error retrieving supported features
+                console.log(err, errmsage);
+            });
+            document.getElementById('submitButton').addEventListener('click', () => {
+                MessengerExtensions.requestCloseBrowser(function success() {
+                    console.log("Webview closing");
+                }, function error(err) {
+                    console.log(err);
+                });
+            });
+        };
+    </script>
+</body>
+
+</html>
