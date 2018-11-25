@@ -66,13 +66,6 @@
             fjs.parentNode.insertBefore(js, fjs);
         }(document, 'script', 'Messenger'));
         window.extAsyncInit = () => {
-            MessengerExtensions.getUserID(function success(user_ids) {
-                // User ID was successfully obtained. 
-                let psid = user_ids.psid;
-                console.log(psid);
-            }, function error(err, errorMessage) {
-                // Error handling code
-            });
             MessengerExtensions.getSupportedFeatures(function success(result) {
                 let features = result.supported_features;
                 console.log('testing');

@@ -110,6 +110,14 @@ app.get('/invitation', (req, res) => {
   }
 });
 
+app.get('/invitationpostback', (req, res) => {
+  let body = req.query;
+  res.status(200).send('Please close this window to return to the conversation thread.');
+  callSendAPI(body.psid, {
+    text: "You are now in the party! Remind the host to start the party when everyone is ready!"
+  });
+});
+
 // Handles messages sent to the bot
 function handleMessage(sender_psid, received_message) {
   let response;

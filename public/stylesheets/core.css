@@ -28,14 +28,44 @@ body {
     text-align: center;
 }
 
-img {
-    margin: 0 auto;
-}
-
 .img-responsive_50 {
     max-width: 50%;
 }
 
+.img-profile {
+    border-radius: 50%;
+}
+
 .mb-25 {
     margin-bottom: 25px;
+}
+
+.create_by {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.create_by img {
+    width: 20px;
+    margin-right: 5px;
+}
+
+.participants-list {
+    list-style: none;
+    padding-left: 0;
+}
+
+.participants-list li{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 5px;
+}
+.participants-list img {
+    width: 25px;
+    margin-right: 5px;
+}
+
+.create_by p {
+    font-size: 1em;
 }
