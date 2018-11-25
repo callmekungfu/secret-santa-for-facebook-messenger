@@ -1,6 +1,7 @@
 {
-  "name": "expressazure",
-  "version": "0.0.0",
+  "name": "secret-santa-for-messenger",
+  "description": "A messenger extension that simplifies the way friends host Secret Santa parties",
+  "version": "0.1.5",
   "private": true,
   "scripts": {
     "start": "nodemon ./app.js"
@@ -13,5 +14,6 @@
     "jade": "~1.11.0",
     "mongoose": "^5.3.11",
     "morgan": "~1.9.0"
-  }
+  },
+  "license": "MIT",
 }
