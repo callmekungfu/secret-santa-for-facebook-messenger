@@ -10,7 +10,8 @@ const
   dotenv = require('dotenv').config();
 
 const
-  PartyModel = require('./models/party');
+  PartyModel = require('./models/party'),
+  UserModel = require('./models/user');
 
 var app = express();
 
@@ -37,6 +38,56 @@ app.listen(app.get('port'), () => {
 });
 
 module.exports = app;
+
+app.get('/testing', (req, res) => {
+  const psid = '2542760535764230';
+  checkIfUserAlreadyRegistered(psid, (err, found) => {
+    if (err) {
+      console.log(err);
+    } else if (found) {
+      // if found
+      UserModel.findOneAndUpdate({
+        _id: found._id
+      }, {
+        $push: {
+          parties: 'Testing'
+        }
+      }, (err, data) => {
+        if (err) {
+          console.log(err);
+        } else {
+          console.log('Success', data);
+          res.status(200).send(data);
+        }
+      });
+    } else {
+      getUserInfoFromGraph(psid, (err, userInfo) => {
+        if (err) {
+          console.log(err);
+        } else {
+          const userInstance = new UserModel({
+            name: userInfo.name,
+            first_name: userInfo.first_name,
+            last_name: userInfo.last_name,
+            profile: userInfo.profile_pic,
+            psid: userInfo.id,
+            parties: 'Later',
+            wishlist: [],
+            recipients: []
+          });
+          userInstance.save((err, data) => {
+            if (err) {
+              console.log(err);
+            } else {
+              console.log('Success', data);
+              res.status(200).send(data);
+            }
+          })
+        }
+      });
+    }
+  });
+});
 
 // Accepts POST requests at the /webhook endpoint
 app.post('/webhook', (req, res) => {
@@ -115,13 +166,64 @@ app.get('/optionspostback', (req, res) => {
     ],
     note: body.note
   });
-  partyInstance.save((err, data) => {
+  partyInstance.save((err, partyInfo) => {
     if (err) {
       console.log(err)
     } else {
-      let response = afterPartyCreation(body,data._id);
-      res.status(200).send('Please close this window to return to the conversation thread.');
-      callSendAPI(body.psid, response);
+      checkIfUserAlreadyRegistered(body.psid, (err, found) => {
+        if (err) {
+          console.error('An error occurred with the database: ', err);
+          res.status(500).send('Server Error. This is our fault, give us some time to resolve it.');
+        } else if (found) {
+          // if found
+          UserModel.findOneAndUpdate({
+            _id: found._id
+          }, {
+            $push: {
+              parties: partyInfo._id
+            }
+          }, (err, data) => {
+            if (err) {
+              console.error('An error occurred with the database: ', err);
+              res.status(500).send('Server Error. This is our fault, give us some time to resolve it.');
+            } else {
+              console.log('Update Success', data);
+              let response = afterPartyCreation(body, partyInfo._id);
+              res.status(200).send('Please close this window to return to the conversation thread.');
+              callSendAPI(body.psid, response);
+            }
+          });
+        } else {
+          getUserInfoFromGraph(body.psid, (err, userInfo) => {
+            if (err) {
+              console.error('An error occurred with the database: ', err);
+              res.status(500).send('Server Error. This is our fault, give us some time to resolve it.');
+            } else {
+              const userInstance = new UserModel({
+                name: userInfo.name,
+                first_name: userInfo.first_name,
+                last_name: userInfo.last_name,
+                profile: userInfo.profile_pic,
+                psid: userInfo.id,
+                parties: [partyInfo._id],
+                wishlist: [],
+                recipients: []
+              });
+              userInstance.save((err, data) => {
+                if (err) {
+                  console.error('An error occurred with the database: ', err);
+                  res.status(500).send('Server Error. This is our fault, give us some time to resolve it.');
+                } else {
+                  console.log('Success', data);
+                  let response = afterPartyCreation(body, partyInfo._id);
+                  res.status(200).send('Please close this window to return to the conversation thread.');
+                  callSendAPI(body.psid, response);
+                }
+              })
+            }
+          });
+        }
+      });
     }
   });
 });
@@ -172,7 +274,7 @@ function handleMessage(sender_psid, received_message) {
 
 function handlePostback(sender_psid, postback) {
   let response;
-  switch(postback.payload) {
+  switch (postback.payload) {
     case 'get_started':
       callSendAPI(sender_psid, {
         "text": `Let's get started!🎉🎉`
@@ -196,19 +298,20 @@ function setRoomPreferences() {
         template_type: "button",
         "text": "Sounds good, let's get your party going! 🎉🎉",
         buttons: [{
-          type: "web_url",
-          url: SERVER_URL + "/options",
-          title: "Create Your Party",
-          webview_height_ratio: 'tall',
-          messenger_extensions: true
-        },
-        {
-          type: "web_url",
-          url: SERVER_URL + "/help",
-          title: "What are parties?",
-          webview_height_ratio: 'full',
-          messenger_extensions: true
-        }]
+            type: "web_url",
+            url: SERVER_URL + "/options",
+            title: "Create Your Party",
+            webview_height_ratio: 'tall',
+            messenger_extensions: true
+          },
+          {
+            type: "web_url",
+            url: SERVER_URL + "/help",
+            title: "What are parties?",
+            webview_height_ratio: 'full',
+            messenger_extensions: true
+          }
+        ]
       }
     }
   };
@@ -239,15 +342,13 @@ function afterPartyCreation(body, party_id) {
                     messenger_extensions: true,
                     webview_height_ratio: 'tall'
                   },
-                  buttons: [
-                    {
-                      type: "web_url",
-                      title: "Join Now!",
-                      url: SERVER_URL + '/invitation',
-                      messenger_extensions: true,
-                      webview_height_ratio: 'tall'
-                    }
-                  ]
+                  buttons: [{
+                    type: "web_url",
+                    title: "Join Now!",
+                    url: SERVER_URL + '/invitation',
+                    messenger_extensions: true,
+                    webview_height_ratio: 'tall'
+                  }]
                 }]
               }
             }
@@ -257,6 +358,39 @@ function afterPartyCreation(body, party_id) {
     }
   };
   return response;
+}
+
+function getUserInfoFromGraph(psid, callback) {
+  request({
+    "uri": "https://graph.facebook.com/" + psid,
+    "qs": {
+      "access_token": PAGE_ACCESS_TOKEN,
+      "fields": 'first_name,last_name,name,profile_pic'
+    },
+    "method": "GET"
+  }, (err, facebook_res, body) => {
+    if (err) {
+      callback(err, null);
+    } else {
+      callback(null, JSON.parse(body));
+    }
+  });
+}
+
+function checkIfUserAlreadyRegistered(psid, callback) {
+  UserModel.findOne({
+    psid: psid
+  }, (err, result) => {
+    if (err) {
+      callback(err, null);
+    } else {
+      if (result) {
+        callback(null, result);
+      } else {
+        callback(null, null);
+      }
+    }
+  })
 }
 
 // Sends response messages via the Send API
