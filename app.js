@@ -141,7 +141,7 @@ app.get('/optionspostback', (req, res) => {
           UserModel.findOneAndUpdate({
             _id: found._id
           }, {
-            $push: {
+            $addToSet: {
               parties: partyInfo._id
             }
           }, (err, data) => {
@@ -161,7 +161,6 @@ app.get('/optionspostback', (req, res) => {
               console.error('An error occurred with the database: ', err);
               res.status(500).send('Server Error. This is our fault, give us some time to resolve it.');
             } else {
-              console.log(userInfo);
               const userInstance = new UserModel({
                 name: userInfo.name,
                 first_name: userInfo.first_name,
@@ -221,9 +220,69 @@ app.get('/invitation', (req, res) => {
 
 app.get('/invitationpostback', (req, res) => {
   let body = req.query;
-  res.status(200).send('Please close this window to return to the conversation thread.');
-  callSendAPI(body.psid, {
-    text: "You are now in the party! Remind the host to start the party when everyone is ready!"
+  PartyModel.findOneAndUpdate({_id: body.party_id}, {
+    $addToSet: {
+      participants: body.psid
+    }
+  }, (err, party_info) => {
+    if (err) {
+      console.error('An error occurred with the database: ', err);
+      res.status(500).send('Server Error. This is our fault, give us some time to resolve it.');
+    } else {
+      checkIfUserAlreadyRegistered(body.psid, (err, found) => {
+        if (err) {
+          console.error('An error occurred with the database: ', err);
+          res.status(500).send('Server Error. This is our fault, give us some time to resolve it.');
+        } else if (found) {
+          UserModel.findOneAndUpdate({psid: body.psid}, {
+            $addToSet: {
+              parties: body.party_id
+            }
+          }, (err, user) => {
+            if (err) {
+              console.error('An error occurred with the database: ', err);
+              res.status(500).send('Server Error. This is our fault, give us some time to resolve it.');
+            } else {
+              console.log('Success', user);
+              res.status(200).send('Please close this window to return to the conversation thread.');
+              callSendAPI(body.psid, {
+                text: `Welcome to Secret Santa For Friends, ${user.first_name}! You are now in the party! Remind the host to start the party when everyone is ready!`
+              });
+            }
+          });
+        } else {
+          getUserInfoFromGraph(body.psid, (err, userInfo) => {
+            if (err) {
+              console.error('An error occurred with the database: ', err);
+              res.status(500).send('Server Error. This is our fault, give us some time to resolve it.');
+            } else {
+              const userInstance = new UserModel({
+                name: userInfo.name,
+                first_name: userInfo.first_name,
+                last_name: userInfo.last_name,
+                profile: userInfo.profile_pic,
+                psid: userInfo.id,
+                parties: [party_info._id],
+                wishlist: [],
+                recipients: []
+              });
+              userInstance.save((err, data) => {
+                if (err) {
+                  console.error('An error occurred with the database: ', err);
+                  res.status(500).send('Server Error. This is our fault, give us some time to resolve it.');
+                } else {
+                  console.log('Success', data);
+                  res.status(200).send('Please close this window to return to the conversation thread.');
+                  callSendAPI(body.psid, {
+                    text: `Welcome to Secret Santa For Friends, ${data.first_name}! You are now in the party! Remind the host to start the party when everyone is ready!`
+                  });
+                }
+              })
+            }
+          });
+        }
+      });
+    }
   });
 });
 
