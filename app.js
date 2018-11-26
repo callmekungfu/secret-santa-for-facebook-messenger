@@ -6,7 +6,11 @@ const
   express = require('express'),
   body_parser = require('body-parser'),
   moment = require('moment'),
+  mongoose = require('mongoose'),
   dotenv = require('dotenv').config();
+
+const
+  PartyModel = require('./models/party');
 
 var app = express();
 
@@ -17,6 +21,16 @@ app.use(express.static('public'));
 const PAGE_ACCESS_TOKEN = process.env.PAGE_ACCESS_TOKEN;
 const SERVER_URL = process.env.SERVER_URL;
 const APP_SECRET = process.env.APP_SECRET;
+const MONGO_URL = process.env.MONGO_URL;
+
+mongoose.connect(MONGO_URL, {
+  useNewUrlParser: true
+});
+mongoose.Promise = global.Promise;
+
+const db = mongoose.connection;
+
+db.on('error', console.error.bind(console, 'MongoDB Connection Error: '))
 
 app.listen(app.get('port'), () => {
   console.log('Node app is running on port', app.get('port'));
@@ -91,9 +105,25 @@ app.get('/options', (req, res) => {
 
 app.get('/optionspostback', (req, res) => {
   let body = req.query;
-  let response = afterPartyCreation(body,body.psid);
-  res.status(200).send('Please close this window to return to the conversation thread.');
-  callSendAPI(body.psid, response);
+  const partyInstance = new PartyModel({
+    name: body.name,
+    location: body.location,
+    budget: parseFloat(body.budget).toFixed(2),
+    owner: body.psid,
+    participants: [
+      body.psid
+    ],
+    note: body.note
+  });
+  partyInstance.save((err, data) => {
+    if (err) {
+      console.log(err)
+    } else {
+      let response = afterPartyCreation(body,data._id);
+      res.status(200).send('Please close this window to return to the conversation thread.');
+      callSendAPI(body.psid, response);
+    }
+  });
 });
 
 app.get('/invitation', (req, res) => {
@@ -152,13 +182,13 @@ function handlePostback(sender_psid, postback) {
       });
       break;
     case 'NEW_PARTY':
-      callSendAPI(sender_psid, setRoomPreferences(sender_psid));
+      callSendAPI(sender_psid, setRoomPreferences());
       break;
   }
 }
 
 // Define the template and webview
-function setRoomPreferences(sender_psid) {
+function setRoomPreferences() {
   let response = {
     attachment: {
       type: "template",
@@ -185,7 +215,7 @@ function setRoomPreferences(sender_psid) {
   return response;
 }
 
-function afterPartyCreation(body, sender_psid) {
+function afterPartyCreation(body, party_id) {
   let response = {
     attachment: {
       type: "template",
@@ -205,7 +235,7 @@ function afterPartyCreation(body, sender_psid) {
                   image_url: SERVER_URL + '/images/santa.jpg',
                   default_action: {
                     type: 'web_url',
-                    url: SERVER_URL + '/invitation?party_id=hellothere',
+                    url: SERVER_URL + '/invitation?party_id=' + party_id,
                     messenger_extensions: true,
                     webview_height_ratio: 'tall'
                   },
