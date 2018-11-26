@@ -9,6 +9,7 @@ So this year, we decided to look into alternative methods - online secret santa 
 ## Technologies
 Here is a list of technologies I used to accomplish this project (Rank by whatever order I can think of.)
 - Express.js (Node.js)
+- EJS
 - MongoDB, interfaced with Mongoose
 - Facebook Messenger Extensions SDK
 - Facebook Webhook

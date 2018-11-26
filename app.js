@@ -15,6 +15,7 @@ const
 
 var app = express();
 
+app.set('view engine', 'ejs');
 app.set('port', process.env.PORT || 5000);
 app.use(body_parser.json());
 app.use(express.static('public'));
@@ -28,9 +29,7 @@ mongoose.connect(MONGO_URL, {
   useNewUrlParser: true
 });
 mongoose.Promise = global.Promise;
-
 const db = mongoose.connection;
-
 db.on('error', console.error.bind(console, 'MongoDB Connection Error: '))
 
 app.listen(app.get('port'), () => {
@@ -41,50 +40,12 @@ module.exports = app;
 
 app.get('/testing', (req, res) => {
   const psid = '2542760535764230';
-  checkIfUserAlreadyRegistered(psid, (err, found) => {
-    if (err) {
-      console.log(err);
-    } else if (found) {
-      // if found
-      UserModel.findOneAndUpdate({
-        _id: found._id
-      }, {
-        $push: {
-          parties: 'Testing'
-        }
-      }, (err, data) => {
-        if (err) {
-          console.log(err);
-        } else {
-          console.log('Success', data);
-          res.status(200).send(data);
-        }
-      });
-    } else {
-      getUserInfoFromGraph(psid, (err, userInfo) => {
-        if (err) {
-          console.log(err);
-        } else {
-          const userInstance = new UserModel({
-            name: userInfo.name,
-            first_name: userInfo.first_name,
-            last_name: userInfo.last_name,
-            profile: userInfo.profile_pic,
-            psid: userInfo.id,
-            parties: 'Later',
-            wishlist: [],
-            recipients: []
-          });
-          userInstance.save((err, data) => {
-            if (err) {
-              console.log(err);
-            } else {
-              console.log('Success', data);
-              res.status(200).send(data);
-            }
-          })
-        }
-      });
+  res.render('invitation', {
+    party: {
+      name: 'Hello World',
+      location: 'Nice Place',
+      budget: 12,
+      note: 'Yolo.'
     }
   });
 });
@@ -159,6 +120,7 @@ app.get('/optionspostback', (req, res) => {
   const partyInstance = new PartyModel({
     name: body.name,
     location: body.location,
+    date: body.date,
     budget: parseFloat(body.budget).toFixed(2),
     owner: body.psid,
     participants: [
@@ -199,6 +161,7 @@ app.get('/optionspostback', (req, res) => {
               console.error('An error occurred with the database: ', err);
               res.status(500).send('Server Error. This is our fault, give us some time to resolve it.');
             } else {
+              console.log(userInfo);
               const userInstance = new UserModel({
                 name: userInfo.name,
                 first_name: userInfo.first_name,
@@ -230,16 +193,30 @@ app.get('/optionspostback', (req, res) => {
 
 app.get('/invitation', (req, res) => {
   let referer = req.get('Referer');
-  if (referer) {
-    if (referer.indexOf('www.messenger.com') >= 0) {
-      res.setHeader('X-Frame-Options', 'ALLOW-FROM https://www.messenger.com/');
-    } else if (referer.indexOf('www.facebook.com') >= 0) {
-      res.setHeader('X-Frame-Options', 'ALLOW-FROM https://www.facebook.com/');
-    }
-    res.sendFile('public/invitation.html', {
-      root: __dirname
+  let { party_id } = req.query;
+  
+  PartyModel.findOne({_id: party_id}, (err, party_data) => {
+    UserModel.findOne({psid: party_data.owner}, (err, owner_data) => {
+      UserModel.find({parties: party_data._id}, (err, participants) => {
+        party_data.date = moment(party_data.date).format('MMMM Do YYYY [at] h:mm a')
+        const content = {
+          party: party_data,
+          owner: owner_data,
+          participants
+        }
+        if (referer) {
+          if (referer.indexOf('www.messenger.com') >= 0) {
+            res.setHeader('X-Frame-Options', 'ALLOW-FROM https://www.messenger.com/');
+          } else if (referer.indexOf('www.facebook.com') >= 0) {
+            res.setHeader('X-Frame-Options', 'ALLOW-FROM https://www.facebook.com/');
+          }
+          res.render('invitation', {
+            content
+          });
+        }
+      })
     });
-  }
+  });
 });
 
 app.get('/invitationpostback', (req, res) => {
@@ -345,7 +322,7 @@ function afterPartyCreation(body, party_id) {
                   buttons: [{
                     type: "web_url",
                     title: "Join Now!",
-                    url: SERVER_URL + '/invitation',
+                    url: SERVER_URL + '/invitation?party_id=' + party_id,
                     messenger_extensions: true,
                     webview_height_ratio: 'tall'
                   }]

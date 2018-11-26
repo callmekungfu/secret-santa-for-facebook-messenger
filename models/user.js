@@ -18,6 +18,11 @@ const UserSchema = new Schema({
         maxlength: 100,
         required: true
     },
+    profile: {
+        type: String,
+        maxlength: 500,
+        required: true
+    },
     psid: {
         type: String,
         required: true

@@ -9,22 +9,22 @@
 
 <body>
     <input type="text" id="psid" hidden />
+    <input type="text" id="partyId" value="<%= content.party._id %>" hidden />
     <div class="container flexed v-center full-height">
         <div class="inner">
             <p class="text-centered">You are invited to...</p>
-            <h2 class="text-centered">The <span id="partyName">BBQ SECRET SANTA</span> Party!</h2>
-            <div class="create_by mb-25"><img src="/images/logo.png" class="img-profile" />
-                <p class="text-muted">Yong Lin Wang</p>
+            <h2 class="text-centered">The <span id="partyName"><%= content.party.name %></span> Party!</h2>
+            <div class="create_by mb-25"><img src="<%= content.owner.profile %>" class="img-profile" />
+                <p class="text-muted"><%= content.owner.name %></p>
             </div>
             <h4>The Details:</h4>
             <ul>
-                <li>Location: CRX 5th Floor</li>
-                <li>Date: December 10th 2018 at 10 pm</li>
-                <li>Budget: $15</li>
+                <li>Location: <%= content.party.location %></li>
+                <li>Date: <%= content.party.date %></li>
+                <li>Budget: $<%= content.party.budget %></li>
             </ul>
             <h4>Please Note:</h4>
-            <p>Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut
-                labore et dolore magna aliquyam erat, sed diam voluptua!</p>
+            <p><%= content.party.note %></p>
             <h4>Who's in:</h4>
             <ul class="participants-list mb-25">
                 <li><img src="/images/logo.png" class="img-profile" />
@@ -45,7 +45,6 @@
 
     <script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
         crossorigin="anonymous"></script>
-    <script src="/javascript/invitation.js"></script>
     <script>
         (function (d, s, id) {
             var js, fjs = d.getElementsByTagName(s)[0];
@@ -88,7 +87,8 @@
             );
             document.getElementById('acceptInvitation').addEventListener('click', () => {
                 const content = {
-                    psid: $('#psid').val()
+                    psid: $('#psid').val(),
+                    party_id: $('#partyId').val()
                 }
                 $.ajax('/invitationpostback', {
                     contentType: 'application/json',
