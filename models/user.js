@@ -36,7 +36,10 @@ const UserSchema = new Schema({
         required: true
     },
     recipients: {
-        type: [String],
+        type: [{
+            id: {type: String, required: true},
+            party_id: {type: String, required: true}
+        }],
         required: true
     }
 });

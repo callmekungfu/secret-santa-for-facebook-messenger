@@ -27,15 +27,10 @@
             <p><%= content.party.note %></p>
             <h4>Who's in:</h4>
             <ul class="participants-list mb-25">
-                <li><img src="/images/logo.png" class="img-profile" />
-                    <p class="text-muted">Yong Lin Wang</p>
-                </li>
-                <li><img src="/images/logo.png" class="img-profile" />
-                    <p class="text-muted">Yong Lin Wang</p>
-                </li>
-                <li><img src="/images/logo.png" class="img-profile" />
-                    <p class="text-muted">Yong Lin Wang</p>
-                </li>
+                <% content.participants.forEach(function(hottie) { %>
+                    <li><img src="<%= hottie.profile%>" class="img-profile" />
+                        <p class="text-muted"><%= hottie.name%></p></li>
+                <% }); %>
             </ul>
             <div class="weui-btn-area">
                 <button class="weui-btn weui-btn_primary" id="acceptInvitation">Accept Invitation!</button>

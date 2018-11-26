@@ -7,6 +7,7 @@ const
   body_parser = require('body-parser'),
   moment = require('moment'),
   mongoose = require('mongoose'),
+  _ = require('underscore'),
   dotenv = require('dotenv').config();
 
 const
@@ -192,11 +193,19 @@ app.get('/optionspostback', (req, res) => {
 
 app.get('/invitation', (req, res) => {
   let referer = req.get('Referer');
-  let { party_id } = req.query;
-  
-  PartyModel.findOne({_id: party_id}, (err, party_data) => {
-    UserModel.findOne({psid: party_data.owner}, (err, owner_data) => {
-      UserModel.find({parties: party_data._id}, (err, participants) => {
+  let {
+    party_id
+  } = req.query;
+
+  PartyModel.findOne({
+    _id: party_id
+  }, (err, party_data) => {
+    UserModel.findOne({
+      psid: party_data.owner
+    }, (err, owner_data) => {
+      UserModel.find({
+        parties: party_data._id
+      }, (err, participants) => {
         party_data.date = moment(party_data.date).format('MMMM Do YYYY [at] h:mm a')
         const content = {
           party: party_data,
@@ -220,7 +229,9 @@ app.get('/invitation', (req, res) => {
 
 app.get('/invitationpostback', (req, res) => {
   let body = req.query;
-  PartyModel.findOneAndUpdate({_id: body.party_id}, {
+  PartyModel.findOneAndUpdate({
+    _id: body.party_id
+  }, {
     $addToSet: {
       participants: body.psid
     }
@@ -234,7 +245,9 @@ app.get('/invitationpostback', (req, res) => {
           console.error('An error occurred with the database: ', err);
           res.status(500).send('Server Error. This is our fault, give us some time to resolve it.');
         } else if (found) {
-          UserModel.findOneAndUpdate({psid: body.psid}, {
+          UserModel.findOneAndUpdate({
+            psid: body.psid
+          }, {
             $addToSet: {
               parties: body.party_id
             }
@@ -308,6 +321,82 @@ function handleMessage(sender_psid, received_message) {
   callSendAPI(sender_psid, response);
 }
 
+app.get('/startparty', (req, res) => {
+  let referer = req.get('Referer');
+  let {
+    party_id
+  } = req.query;
+  PartyModel.findOne({
+    _id: party_id
+  }, (err, party_data) => {
+    if (party_data.length <= 1) {
+      res.status(200).send('<h1>You don\'t have enough participants in your party to start the party!')
+    } else {
+      UserModel.find({
+        parties: party_data._id
+      }, (err, participants) => {
+        party_data.date = moment(party_data.date).format('MMMM Do YYYY [at] h:mm a')
+        const content = {
+          party: party_data,
+          participants
+        }
+        if (referer) {
+          if (referer.indexOf('www.messenger.com') >= 0) {
+            res.setHeader('X-Frame-Options', 'ALLOW-FROM https://www.messenger.com/');
+          } else if (referer.indexOf('www.facebook.com') >= 0) {
+            res.setHeader('X-Frame-Options', 'ALLOW-FROM https://www.facebook.com/');
+          }
+          res.render('startparty', {
+            content
+          });
+        }
+      });
+    }
+  });
+});
+
+app.get('/startpartypostback',(req, res) => {
+  const { party_id, psid } = req.query;
+  PartyModel.findOne({_id: party_id}, (err, partyInfo) => {
+    const { participants } = partyInfo;
+    // const participants = ["anthony", "andrew", "shannon", "daniel", "yonglin", "ivy", "shwan"]
+    let gifting = [];
+    let recipients = [];
+    _.map(participants, (participant) => {
+      let pool = participants.slice(0);
+      pool.splice(pool.indexOf(participant), 1);
+      pool = _.difference(pool,recipients);
+      let recipient;
+      if (pool.length === 0) {
+        recipient = recipients[Math.floor(Math.random() * recipients.length)];
+      } else {
+        recipient = pool[Math.floor(Math.random() * pool.length)];
+      }
+      recipients.push(recipient);
+      gifting.push({
+        from: participant,
+        to: recipient
+      })
+    });
+    _.map(gifting, (pair) => {
+      UserModel.findOneAndUpdate({psid: pair.from}, {$addToSet: {recipients: {id: pair.to, party_id}}}, (err) => {
+        if (err) {
+          console.log(err)
+        } else {
+          UserModel.findOne({psid: pair.to},(err, getter) => {
+            if (err) {
+              console.log(err)
+            } else {
+              console.log(pair.to, getter.name);
+              callSendAPI(pair.from, {text: `Your secret santa recipient has been assigned! You will be getting a gift for: ${getter.name}`});
+            }
+          })
+        }
+      })
+    });
+  }) 
+});
+
 function handlePostback(sender_psid, postback) {
   let response;
   switch (postback.payload) {
@@ -322,7 +411,31 @@ function handlePostback(sender_psid, postback) {
     case 'NEW_PARTY':
       callSendAPI(sender_psid, setRoomPreferences());
       break;
+    case 'MY_PARTIES':
+      postbackParties(sender_psid)
+      break;
   }
+}
+
+function postbackParties(sender_psid) {
+  PartyModel.find({
+    owner: sender_psid
+  }, (err, parties) => {
+    if (err) {
+      console.log(err)
+      callSendAPI(sender_psid, {
+        text: "Failed to retrieve parties... This is likely our fault. Please try again later."
+      });
+    } else if (parties) {
+      _.map(parties, (party) => {
+        callSendAPI(sender_psid, partyDetailsPrompt(party));
+      });
+    } else {
+      callSendAPI(sender_psid, {
+        text: "You haven't created any party yet! Click on <Create a party> bellow to get started!"
+      });
+    }
+  })
 }
 
 // Define the template and webview
@@ -371,7 +484,7 @@ function afterPartyCreation(body, party_id) {
                 elements: [{
                   title: `You are invited to ${body.name} Party!`,
                   subtitle: `More Details:\n\nLocation: ${body.location}\nDate:${moment(body.date).format('MMMM Do YYYY, h:mm a')}\nBudget:$${body.budget}\n\nJoin Now!`,
-                  image_url: SERVER_URL + '/images/santa.jpg',
+                  image_url: 'https://picsum.photos/400/600',
                   default_action: {
                     type: 'web_url',
                     url: SERVER_URL + '/invitation?party_id=' + party_id,
@@ -395,6 +508,36 @@ function afterPartyCreation(body, party_id) {
   };
   return response;
 }
+
+function partyDetailsPrompt(party) {
+  return {
+    attachment: {
+      type: "template",
+      payload: {
+        template_type: 'generic',
+        elements: [{
+          title: `${party.name}`,
+          image_url: 'https://picsum.photos/400/600',
+          subtitle: `Date: ${moment(party.date).format('MMMM Do YYYY, h:mm a')}\nThere are currently ${party.participants.length-1} friends in the party.`,
+          default_action: {
+            type: 'web_url',
+            url: SERVER_URL + '/partydetails?party_id=' + party._id,
+            messenger_extensions: true,
+            webview_height_ratio: 'tall'
+          },
+          buttons: [{
+            type: "web_url",
+            title: "Start Party!",
+            url: SERVER_URL + '/startparty?party_id=' + party._id,
+            messenger_extensions: true,
+            webview_height_ratio: 'tall'
+          }]
+        }]
+      }
+    }
+  };
+}
+
 
 function getUserInfoFromGraph(psid, callback) {
   request({
