@@ -8,7 +8,8 @@
 </head>
 
 <body>
-    <form action="/optionspostback" method="get">
+    <div class="weui-toptips weui-toptips_warn js_tooltips">Oops, there is a problem with your input...</div>
+    <form id="partyCreationForm">
         <input type="hidden" name="psid" id="psid">
         <h3 class="weui-cells__title">Party Name</h3>
         <div class="weui-cells">
@@ -51,9 +52,10 @@
             </div>
         </div>
         <div class="weui-btn-area">
-            <input class="weui-btn weui-btn_primary" type="submit" value="Submit" id="submitButton">
+            <button class="weui-btn weui-btn_primary" type="submit" id="submitButton"><i class="weui-loading hidden"></i> Submit</button>
         </div>
     </form>
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
     <script>
         (function (d, s, id) {
             var js, fjs = d.getElementsByTagName(s)[0];
@@ -85,12 +87,46 @@
                 // error retrieving supported features
                 console.log(err, errmsage);
             });
-            document.getElementById('submitButton').addEventListener('click', () => {
-                MessengerExtensions.requestCloseBrowser(function success() {
-                    console.log("Webview closing");
-                }, function error(err) {
-                    console.log(err);
+            $('#partyCreationForm input').blur((evt) => {
+                if($(this).val()) {
+                    $('.weui-toptips').slideUp('fast');
+                    $(evt.target).closest('.weui-cell').removeClass('weui-cell_warn');
+                }
+            });
+            $('#partyCreationForm').submit((evt) => {
+                evt.preventDefault();
+                var noEmpty = true;
+                $('#submitButton').toggleClass('weui-btn_loading');
+                $('.weui-loading').toggleClass('hidden');
+                $('#partyCreationForm input').each(function(){
+                    if( !$(this).val() ) {
+                        $(this).closest('.weui-cell').addClass('weui-cell_warn');
+                        noEmpty = false;
+                        $('.weui-toptips').slideDown('fast');
+                        $('#submitButton').toggleClass('weui-btn_loading');
+                        $('.weui-loading').toggleClass('hidden');
+                    }
                 });
+                if(noEmpty) {
+                    const body = {
+                        name: $('input[name="name"]').val(),
+                        location: $('input[name="location"]').val(),
+                        date: $('input[name="date"]').val(),
+                        budget: $('input[name="budget"]').val(),
+                        note: $('input[name="note"]').val(),
+                    };
+                    $.ajax('/optionspostback', {
+                        method: 'GET',
+                        data: body,
+                        contentType: 'application/json',
+                    }).done((data) => {
+                        MessengerExtensions.requestCloseBrowser(function success() {
+                            console.log("Webview closing");
+                        }, function error(err) {
+                            console.log(err);
+                        });
+                    });
+                }
             });
         };
     </script>

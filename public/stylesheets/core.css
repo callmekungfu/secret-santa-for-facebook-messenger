@@ -69,3 +69,7 @@ body {
 .create_by p {
     font-size: 1em;
 }
+
+.hidden {
+    display: none;
+}

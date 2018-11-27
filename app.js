@@ -64,17 +64,12 @@ app.get('/testing', (req, res) => {
 app.post('/webhook', (req, res) => {
   let body = req.body;
   if (body.object === 'page') {
-
     body.entry.forEach(({
       messaging
     }) => {
-
       let webhook_event = messaging[0];
-      console.log(webhook_event);
-
       let sender_psid = webhook_event.sender.id;
       console.log(`Sender PSID: ${sender_psid}`);
-
       if (webhook_event.message) {
         handleMessage(sender_psid, webhook_event.message);
       } else if (webhook_event.postback) {
@@ -82,13 +77,10 @@ app.post('/webhook', (req, res) => {
       }
 
     });
-
     res.status(200).send('EVENT_RECEIVED');
-
   } else {
     res.sendStatus(404);
   }
-
 });
 
 app.get('/webhook', (req, res) => {
@@ -99,12 +91,9 @@ app.get('/webhook', (req, res) => {
   let challenge = req.query['hub.challenge'];
 
   if (mode && token) {
-
     if (mode === 'subscribe' && token === VERIFY_TOKEN) {
-
       console.log('WEBHOOK_VERIFIED');
       res.status(200).send(challenge);
-
     } else {
       res.sendStatus(403);
     }
