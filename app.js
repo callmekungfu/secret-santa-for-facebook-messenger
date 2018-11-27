@@ -40,14 +40,9 @@ app.listen(app.get('port'), () => {
 module.exports = app;
 
 app.get('/testing', (req, res) => {
-  const psid = '2542760535764230';
-  res.render('invitation', {
-    party: {
-      name: 'Hello World',
-      location: 'Nice Place',
-      budget: 12,
-      note: 'Yolo.'
-    }
+  const psid = '1951264418323773';
+  callSendAPI(psid, {
+    text: 'I love you~'
   });
 });
 
@@ -281,7 +276,7 @@ app.get('/invitationpostback', (req, res) => {
               });
               userInstance.save((err, data) => {
                 if (err) {
-                  console.error('An error occurred with the database: ', err);
+                  console.error('An error occurred when saving the user: ', userInfo);
                   res.status(500).send('Server Error. This is our fault, give us some time to resolve it.');
                 } else {
                   console.log('Success', data);
@@ -378,6 +373,7 @@ app.get('/startpartypostback',(req, res) => {
         to: recipient
       })
     });
+    console.log(gifting)
     _.map(gifting, (pair) => {
       UserModel.findOneAndUpdate({psid: pair.from}, {$addToSet: {recipients: {id: pair.to, party_id}}}, (err) => {
         if (err) {
@@ -412,9 +408,38 @@ function handlePostback(sender_psid, postback) {
       callSendAPI(sender_psid, setRoomPreferences());
       break;
     case 'MY_PARTIES':
-      postbackParties(sender_psid)
+      postbackParties(sender_psid);
+      break;
+    case 'MY_RECIPIENTS':
+      postbackRecipients(sender_psid);
       break;
   }
+}
+
+function postbackRecipients(sender_psid) {
+  console.log('called');
+  UserModel.findOne({
+    psid: sender_psid
+  }, (err, user) => {
+    console.log(user);
+    if (err) {
+      console.log(err)
+      callSendAPI(sender_psid, {
+        text: "Failed to retrieve your recipients... This is likely our fault. Please try again later."
+      });
+    } else if (user.recipients) {
+      callSendAPI(sender_psid, {
+        text: 'Here are your recipients! (Remember to keep it hush hush!)'
+      })
+      _.map(user.recipients, (recipient,i) => {
+        UserModel.findOne({psid: recipient.id}, (err, person) => {
+          callSendAPI(sender_psid, {
+            text: `Recipient ${i+1}:\n\nName: ${person.name}\nParty: Not available`
+          });
+        });
+      });
+    }
+  });
 }
 
 function postbackParties(sender_psid) {
@@ -426,7 +451,7 @@ function postbackParties(sender_psid) {
       callSendAPI(sender_psid, {
         text: "Failed to retrieve parties... This is likely our fault. Please try again later."
       });
-    } else if (parties) {
+    } else if (parties.length > 0) {
       _.map(parties, (party) => {
         callSendAPI(sender_psid, partyDetailsPrompt(party));
       });
