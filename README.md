@@ -20,6 +20,9 @@ Here is a list of technologies I used to accomplish this project (Rank by whatev
 - VS Code, Github
 - WeUI
 
+## Limitation (Important)
+All users joining the party must have facebook chat enabled. Otherwise they will not recieve any system notifications.
+
 ## Roadmap
 ### Initial Release 1.0 (Currently)
 - Party creation and invitation features
