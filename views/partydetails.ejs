@@ -1,0 +1,66 @@
+<html>
+
+<head>
+    <title>Party Details</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="/stylesheets/style.css">
+    <link rel="stylesheet" href="/stylesheets/core.css">
+</head>
+
+<body>
+    <input type="text" id="psid" hidden />
+    <input type="text" id="partyId" value="<%= content.party._id %>" hidden />
+    <div class="container flexed v-center full-height">
+        <div class="inner">
+            <h2 class="text-centered mb-25">The <span id="partyName"><%= content.party.name %></span></h2>
+            <h4>Details: </h4>
+            <ul>
+                <li>Location: <%= content.party.location %></li>
+                <li>Date: <%= content.party.date %></li>
+                <li>Budget: $<%= content.party.budget %></li>
+            </ul>
+            <h4>Who's in:</h4>
+            <p>Scroll to see more</p>
+            <ul class="participants-list mb-25">
+                <% content.participants.forEach(function(hottie) { %>
+                <li><img src="<%= hottie.profile%>" class="img-profile" />
+                    <p class="text-muted">
+                        <%= hottie.name%>
+                    </p>
+                </li>
+                <% }); %>
+            </ul>
+
+            <div class="weui-btn-area">
+                <button class="weui-btn weui-btn_default" id="close">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
+        crossorigin="anonymous"></script>
+    <script>
+        (function (d, s, id) {
+            var js, fjs = d.getElementsByTagName(s)[0];
+            if (d.getElementById(id)) {
+                return;
+            }
+            js = d.createElement(s);
+            js.id = id;
+            js.src = "//connect.facebook.com/en_US/messenger.Extensions.js";
+            fjs.parentNode.insertBefore(js, fjs);
+        }(document, 'script', 'Messenger'));
+
+        window.extAsyncInit = () => {
+            document.getElementById('close').addEventListener('click', () => {
+                MessengerExtensions.requestCloseBrowser(function success() {
+                    console.log("Webview closing");
+                }, function error(err) {
+                    console.log(err);
+                });
+            });
+        };
+    </script>
+</body>
+
+</html>

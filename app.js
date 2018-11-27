@@ -40,10 +40,7 @@ app.listen(app.get('port'), () => {
 module.exports = app;
 
 app.get('/testing', (req, res) => {
-  const psid = '1951264418323773';
-  callSendAPI(psid, {
-    text: 'I love you~'
-  });
+
 });
 
 // Accepts POST requests at the /webhook endpoint
