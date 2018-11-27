@@ -44,7 +44,7 @@ app.get('/testing', (req, res) => {
     name: "body.name",
     location: "body.location",
     date: "body.date",
-    budget: "parseFloat(body.budget).toFixed(2)",
+    budget: 12,
     owner: "body.psid",
     participants: [
       "body.psid"
