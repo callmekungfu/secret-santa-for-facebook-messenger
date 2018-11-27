@@ -290,6 +290,41 @@ app.get('/invitationpostback', (req, res) => {
   });
 });
 
+app.get('/partydetails', (req, res) => {
+  let referer = req.get('Referer');
+  let {
+    party_id
+  } = req.query;
+  PartyModel.findOne({
+    _id: party_id
+  }, (err, party_data) => {
+    UserModel.findOne({
+      psid: party_data.owner
+    }, {profile: 1, psid: 1, name: 1}, (err, owner_data) => {
+      UserModel.find({
+        parties: party_data._id
+      }, (err, participants) => {
+        party_data.date = moment(party_data.date).format('MMMM Do YYYY [at] h:mm a')
+        const content = {
+          party: party_data,
+          owner: owner_data,
+          participants
+        }
+        if (referer) {
+          if (referer.indexOf('www.messenger.com') >= 0) {
+            res.setHeader('X-Frame-Options', 'ALLOW-FROM https://www.messenger.com/');
+          } else if (referer.indexOf('www.facebook.com') >= 0) {
+            res.setHeader('X-Frame-Options', 'ALLOW-FROM https://www.facebook.com/');
+          }
+          res.render('partydetails.ejs', {
+            content
+          });
+        }
+      })
+    });
+  });
+});
+
 // Handles messages sent to the bot
 function handleMessage(sender_psid, received_message) {
   let response;
