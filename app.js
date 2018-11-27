@@ -191,13 +191,12 @@ app.get('/invitation', (req, res) => {
   let {
     party_id
   } = req.query;
-
   PartyModel.findOne({
     _id: party_id
   }, (err, party_data) => {
     UserModel.findOne({
       psid: party_data.owner
-    }, (err, owner_data) => {
+    }, {profile: 1, psid: 1, name: 1}, (err, owner_data) => {
       UserModel.find({
         parties: party_data._id
       }, (err, participants) => {
@@ -379,7 +378,7 @@ app.get('/startpartypostback',(req, res) => {
         if (err) {
           console.log(err)
         } else {
-          UserModel.findOne({psid: pair.to},(err, getter) => {
+          UserModel.findOne({psid: pair.to}, {name: 1}, (err, getter) => {
             if (err) {
               console.log(err)
             } else {
@@ -420,8 +419,7 @@ function postbackRecipients(sender_psid) {
   console.log('called');
   UserModel.findOne({
     psid: sender_psid
-  }, (err, user) => {
-    console.log(user);
+  }, {recipients: 1}, (err, user) => {
     if (err) {
       console.log(err)
       callSendAPI(sender_psid, {
@@ -432,10 +430,11 @@ function postbackRecipients(sender_psid) {
         text: 'Here are your recipients! (Remember to keep it hush hush!)'
       })
       _.map(user.recipients, (recipient,i) => {
-        UserModel.findOne({psid: recipient.id}, (err, person) => {
-          callSendAPI(sender_psid, {
-            text: `Recipient ${i+1}:\n\nName: ${person.name}\nParty: Not available`
-          });
+        UserModel.findOne({psid: recipient.id}, {name: 1, profile: 1} , (err, person) => {
+          console.log(person);
+          PartyModel.findOne({_id: recipient.party_id}, {name: 1}, (err, partyInfo) => {
+            callSendAPI(sender_psid, recipientDetailsPrompt(person, partyInfo.name));
+          })
         });
       });
     }
@@ -563,6 +562,21 @@ function partyDetailsPrompt(party) {
   };
 }
 
+function recipientDetailsPrompt(user, party) {
+  return {
+    attachment: {
+      type: "template",
+      payload: {
+        template_type: 'generic',
+        elements: [{
+          title: `${user.name}`,
+          image_url: user.profile,
+          subtitle: party,
+        }]
+      }
+    }
+  };
+}
 
 function getUserInfoFromGraph(psid, callback) {
   request({
@@ -576,7 +590,13 @@ function getUserInfoFromGraph(psid, callback) {
     if (err) {
       callback(err, null);
     } else {
-      callback(null, JSON.parse(body));
+      const userInfo = JSON.parse(body);
+      if (userInfo.id) {
+        callback(null, userInfo);
+      } else {
+        callback({message: "Failed to retrieve user profile from facebook", code: 1}, null)
+      }
+      
     }
   });
 }
