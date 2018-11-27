@@ -40,7 +40,24 @@ app.listen(app.get('port'), () => {
 module.exports = app;
 
 app.get('/testing', (req, res) => {
-
+  const partyInstance = new PartyModel({
+    name: "body.name",
+    location: "body.location",
+    date: "body.date",
+    budget: "parseFloat(body.budget).toFixed(2)",
+    owner: "body.psid",
+    participants: [
+      "body.psid"
+    ],
+    note: "This is a note"
+  });
+  partyInstance.save((err, party) => {
+    if (err) {
+      res.json(err);
+    } else {
+      res.json(party);
+    }
+  })
 });
 
 // Accepts POST requests at the /webhook endpoint
