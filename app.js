@@ -231,12 +231,12 @@ app.get('/invitationpostback', (req, res) => {
     }
   }, (err, party_info) => {
     if (err) {
-      console.error('An error occurred with the database: ', err);
+      console.error('Failed to get information about the party: ', err);
       res.status(500).send('Server Error. This is our fault, give us some time to resolve it.');
     } else {
       checkIfUserAlreadyRegistered(body.psid, (err, found) => {
         if (err) {
-          console.error('An error occurred with the database: ', err);
+          console.error('Failed to evaluate if user is already registered: ', err);
           res.status(500).send('Server Error. This is our fault, give us some time to resolve it.');
         } else if (found) {
           UserModel.findOneAndUpdate({
@@ -247,7 +247,7 @@ app.get('/invitationpostback', (req, res) => {
             }
           }, (err, user) => {
             if (err) {
-              console.error('An error occurred with the database: ', err);
+              console.error('Failed to update user account: ', err);
               res.status(500).send('Server Error. This is our fault, give us some time to resolve it.');
             } else {
               console.log('Success', user);
@@ -260,7 +260,7 @@ app.get('/invitationpostback', (req, res) => {
         } else {
           getUserInfoFromGraph(body.psid, (err, userInfo) => {
             if (err) {
-              console.error('An error occurred with the database: ', err);
+              console.error('Failed to get user info from Facebook: ', err);
               res.status(500).send('Server Error. This is our fault, give us some time to resolve it.');
             } else {
               const userInstance = new UserModel({
