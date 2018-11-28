@@ -438,6 +438,10 @@ app.get('/startpartypostback',(req, res) => {
   }) 
 });
 
+app.get('/help', (req, res) => {
+  res.redirect('https://wangyonglin1999.gitbook.io/secretsanta/');
+});
+
 function handlePostback(sender_psid, postback) {
   let response;
   switch (postback.payload) {
