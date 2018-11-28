@@ -40,24 +40,7 @@ app.listen(app.get('port'), () => {
 module.exports = app;
 
 app.get('/testing', (req, res) => {
-  const partyInstance = new PartyModel({
-    name: "body.name",
-    location: "body.location",
-    date: "body.date",
-    budget: 12,
-    owner: "body.psid",
-    participants: [
-      "body.psid"
-    ],
-    note: "This is a note"
-  });
-  partyInstance.save((err, party) => {
-    if (err) {
-      res.json(err);
-    } else {
-      res.json(party);
-    }
-  })
+  res.send('No testing staged yet!');
 });
 
 // Accepts POST requests at the /webhook endpoint
@@ -226,74 +209,83 @@ app.get('/invitation', (req, res) => {
 
 app.get('/invitationpostback', (req, res) => {
   let body = req.query;
-  PartyModel.findOneAndUpdate({
+  PartyModel.findOne({
     _id: body.party_id
-  }, {
-    $addToSet: {
-      participants: body.psid
+  }, {participants: 1, name: 1}, (err, party) => {
+    if (party.participants.includes(body.psid)) {
+      console.log("Already Joined");
+      callSendAPI(body.psid, {text: `You are already a member of ${party.name}!`})
+      return;
     }
-  }, (err, party_info) => {
-    if (err) {
-      console.error('Failed to get information about the party: ', err);
-      res.status(500).send('Server Error. This is our fault, give us some time to resolve it.');
-    } else {
-      checkIfUserAlreadyRegistered(body.psid, (err, found) => {
-        if (err) {
-          console.error('Failed to evaluate if user is already registered: ', err);
-          res.status(500).send('Server Error. This is our fault, give us some time to resolve it.');
-        } else if (found) {
-          UserModel.findOneAndUpdate({
-            psid: body.psid
-          }, {
-            $addToSet: {
-              parties: body.party_id
-            }
-          }, (err, user) => {
-            if (err) {
-              console.error('Failed to update user account: ', err);
-              res.status(500).send('Server Error. This is our fault, give us some time to resolve it.');
-            } else {
-              console.log('Success', user);
-              res.status(200).send('Please close this window to return to the conversation thread.');
-              callSendAPI(body.psid, {
-                text: `Welcome to Secret Santa For Friends, ${user.first_name}! You are now in the party! Remind the host to start the party when everyone is ready!`
-              });
-            }
-          });
-        } else {
-          getUserInfoFromGraph(body.psid, (err, userInfo) => {
-            if (err) {
-              console.error('Failed to get user info from Facebook: ', err);
-              res.status(500).send('Server Error. This is our fault, give us some time to resolve it.');
-            } else {
-              const userInstance = new UserModel({
-                name: userInfo.name,
-                first_name: userInfo.first_name,
-                last_name: userInfo.last_name,
-                profile: userInfo.profile_pic,
-                psid: userInfo.id,
-                parties: [party_info._id],
-                wishlist: [],
-                recipients: []
-              });
-              userInstance.save((err, data) => {
-                if (err) {
-                  console.error('An error occurred when saving the user: ', userInfo);
-                  res.status(500).send('Server Error. This is our fault, give us some time to resolve it.');
-                } else {
-                  console.log('Success', data);
-                  res.status(200).send('Please close this window to return to the conversation thread.');
-                  callSendAPI(body.psid, {
-                    text: `Welcome to Secret Santa For Friends, ${data.first_name}! You are now in the party! Remind the host to start the party when everyone is ready!`
-                  });
-                }
-              })
-            }
-          });
-        }
-      });
-    }
-  });
+    PartyModel.findOneAndUpdate({
+      _id: body.party_id
+    }, {
+      $addToSet: {
+        participants: body.psid
+      }
+    }, (err, party_info) => {
+      if (err) {
+        console.error('Failed to get information about the party: ', err);
+        res.status(500).send('Server Error. This is our fault, give us some time to resolve it.');
+      } else {
+        checkIfUserAlreadyRegistered(body.psid, (err, found) => {
+          if (err) {
+            console.error('Failed to evaluate if user is already registered: ', err);
+            res.status(500).send('Server Error. This is our fault, give us some time to resolve it.');
+          } else if (found) {
+            UserModel.findOneAndUpdate({
+              psid: body.psid
+            }, {
+              $addToSet: {
+                parties: body.party_id
+              }
+            }, (err, user) => {
+              if (err) {
+                console.error('Failed to update user account: ', err);
+                res.status(500).send('Server Error. This is our fault, give us some time to resolve it.');
+              } else {
+                console.log('Success', user);
+                res.status(200).send('Please close this window to return to the conversation thread.');
+                callSendAPI(body.psid, {
+                  text: `Welcome to Secret Santa For Friends, ${user.first_name}! You are now in the party! Remind the host to start the party when everyone is ready!`
+                });
+              }
+            });
+          } else {
+            getUserInfoFromGraph(body.psid, (err, userInfo) => {
+              if (err) {
+                console.error('Failed to get user info from Facebook: ', err);
+                res.status(500).send('Server Error. This is our fault, give us some time to resolve it.');
+              } else {
+                const userInstance = new UserModel({
+                  name: userInfo.name,
+                  first_name: userInfo.first_name,
+                  last_name: userInfo.last_name,
+                  profile: userInfo.profile_pic,
+                  psid: userInfo.id,
+                  parties: [party_info._id],
+                  wishlist: [],
+                  recipients: []
+                });
+                userInstance.save((err, data) => {
+                  if (err) {
+                    console.error('An error occurred when saving the user: ', userInfo);
+                    res.status(500).send('Server Error. This is our fault, give us some time to resolve it.');
+                  } else {
+                    console.log('Success', data);
+                    res.status(200).send('Please close this window to return to the conversation thread.');
+                    callSendAPI(body.psid, {
+                      text: `Welcome to Secret Santa For Friends, ${data.first_name}! You are now in the party! Remind the host to start the party when everyone is ready!`
+                    });
+                  }
+                })
+              }
+            });
+          }
+        });
+      }
+    });
+  })
 });
 
 app.get('/partydetails', (req, res) => {
@@ -390,8 +382,12 @@ app.get('/startparty', (req, res) => {
 app.get('/startpartypostback',(req, res) => {
   const { party_id, psid } = req.query;
   PartyModel.findOne({_id: party_id}, (err, partyInfo) => {
+    if (partyInfo.gifting) {
+      console.log("Game Already Started");
+      callSendAPI(psid, {text: "You have already started the party!"});
+      return;
+    }
     const { participants } = partyInfo;
-    // const participants = ["anthony", "andrew", "shannon", "daniel", "yonglin", "ivy", "shwan"]
     let gifting = [];
     let recipients = [];
     _.map(participants, (participant) => {
@@ -410,22 +406,26 @@ app.get('/startpartypostback',(req, res) => {
         to: recipient
       })
     });
-    console.log(gifting)
-    _.map(gifting, (pair) => {
-      UserModel.findOneAndUpdate({psid: pair.from}, {$addToSet: {recipients: {id: pair.to, party_id}}}, (err) => {
-        if (err) {
-          console.log(err)
-        } else {
-          UserModel.findOne({psid: pair.to}, {name: 1}, (err, getter) => {
+    PartyModel.findOneAndUpdate({_id: party_id}, { gifting }, (err, newParty) => {
+      if (err) {
+      } else {
+        _.map(gifting, (pair) => {
+          UserModel.findOneAndUpdate({psid: pair.from}, {$addToSet: {recipients: {id: pair.to, party_id}}}, (err) => {
             if (err) {
               console.log(err)
             } else {
-              console.log(pair.to, getter.name);
-              callSendAPI(pair.from, {text: `Your secret santa recipient has been assigned! You will be getting a gift for: ${getter.name}`});
+              UserModel.findOne({psid: pair.to}, {name: 1}, (err, getter) => {
+                if (err) {
+                  console.log(err)
+                } else {
+                  console.log(pair.to, getter.name);
+                  callSendAPI(pair.from, {text: `Your secret santa recipient has been assigned! You will be getting a gift for: ${getter.name}`});
+                }
+              })
             }
           })
-        }
-      })
+        });
+      }
     });
   }) 
 });
@@ -450,6 +450,24 @@ function handlePostback(sender_psid, postback) {
     case 'MY_RECIPIENTS':
       postbackRecipients(sender_psid);
       break;
+    case 'MY_PROFILE':
+    callSendAPI(sender_psid, {
+      attachment: {
+        type: "template",
+        payload: {
+          template_type: "button",
+          "text": "This feature is still under development~~",
+          buttons: [{
+              type: "web_url",
+              url: SERVER_URL + "/roadmap",
+              title: "Development Roadmap",
+              webview_height_ratio: 'full',
+              messenger_extensions: true
+            }
+          ]
+        }
+      }
+    });
   }
 }
 
@@ -549,7 +567,7 @@ function afterPartyCreation(body, party_id) {
                   image_url: 'https://picsum.photos/400/600',
                   default_action: {
                     type: 'web_url',
-                    url: SERVER_URL + '/invitation?party_id=' + party_id,
+                    url: SERVER_URL + `/invitation?party_id=` + party_id,
                     messenger_extensions: true,
                     webview_height_ratio: 'tall'
                   },

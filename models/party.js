@@ -28,7 +28,8 @@ const PartySchema = new Schema({
     participants: {
         type: [String],
         required: true
-    }
+    },
+    gifting: []
 });
 
 const PartyModel = mongoose.model('PartyModel', PartySchema);

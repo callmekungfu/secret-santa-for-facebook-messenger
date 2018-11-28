@@ -10,7 +10,18 @@
 <body>
     <input type="text" id="psid" hidden />
     <input type="text" id="partyId" value="<%= content.party._id %>" hidden />
-    <div class="container flexed v-center full-height">
+    <div class="loading flexed v-center full-height">
+        <i class="weui-loading"></i>
+    </div>
+    <div class="flexed v-center full-height hidden already-prompt">
+        <div class="inner text-centered">
+            <h2>You are already in the <%= content.party.name %>!</h2>
+            <div class="weui-btn-area">
+                <button class="weui-btn weui-btn_default" id="close">Return</button>
+            </div>
+        </div>
+    </div>
+    <div class="container flexed v-center full-height hidden">
         <div class="inner">
             <p class="text-centered">You are invited to...</p>
             <h2 class="text-centered">The <span id="partyName"><%= content.party.name %></span> Party!</h2>
@@ -28,7 +39,7 @@
             <h4>Who's in:</h4>
             <ul class="participants-list mb-25">
                 <% content.participants.forEach(function(hottie) { %>
-                    <li><img src="<%= hottie.profile%>" class="img-profile" />
+                    <li id="<%= hottie.psid%>"><img src="<%= hottie.profile%>" class="img-profile" />
                         <p class="text-muted"><%= hottie.name%></p></li>
                 <% }); %>
             </ul>
@@ -52,10 +63,6 @@
             fjs.parentNode.insertBefore(js, fjs);
         }(document, 'script', 'Messenger'));
 
-        const urlParams = new URLSearchParams(window.location.search);
-        const myParam = urlParams.get('party_id');
-        console.log(urlParams);
-
         window.extAsyncInit = () => {
             MessengerExtensions.askPermission(
                 function (permission_response) {
@@ -66,7 +73,22 @@
                         console.log('Permission granted')
                         MessengerExtensions.getContext('1962533450482760',
                         function success(thread_context) {
+                            var alreadyIn = false;
+                            $('.participants-list li').each((i,ele) => {
+                                if ($(ele).attr('id') === thread_context.psid) {
+                                    $('.loading').fadeOut('fast', () => {
+                                        $('.already-prompt').removeClass('hidden');
+                                    })
+                                    alreadyIn = true
+                                }
+                            });
+                            if (!alreadyIn) {
+                                $('.loading').fadeOut('fast', () => {
+                                    $('.container').removeClass('hidden');
+                                })
+                            }
                             document.getElementById("psid").value = thread_context.psid;
+
                         },
                         function error(err) {
                             // error

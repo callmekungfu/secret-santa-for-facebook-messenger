@@ -52,6 +52,8 @@ body {
 
 .participants-list {
     list-style: none;
+    height: 20%;
+    overflow: auto;
     padding-left: 0;
 }
 
