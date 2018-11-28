@@ -489,10 +489,10 @@ function postbackRecipients(sender_psid) {
       callSendAPI(sender_psid, {
         text: "Failed to retrieve your recipients... This is likely our fault. Please try again later."
       });
-    } else {
+    } else if (user){
       if (user.recipients.length === 0) {
         callSendAPI(sender_psid, {
-          text: 'You do not have any recipients!'
+          text: 'You do not have any recipients. If you are already in a party, please inform the owner to start the party.'
         })
         return;
       }
@@ -507,6 +507,10 @@ function postbackRecipients(sender_psid) {
           })
         });
       });
+    } else {
+      callSendAPI(sender_psid, {
+        text: 'You are not in any parties! Please start or join a party then come back.'
+      })
     }
   });
 }
