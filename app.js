@@ -106,7 +106,6 @@ app.get('/optionspostback', (req, res) => {
       return;
     }
   });
-  console.log(body.psid);
   const partyInstance = new PartyModel({
     name: body.name,
     location: body.location,
@@ -501,7 +500,6 @@ function postbackRecipients(sender_psid) {
       })
       _.map(user.recipients, (recipient,i) => {
         UserModel.findOne({psid: recipient.id}, {name: 1, profile: 1} , (err, person) => {
-          console.log(person);
           PartyModel.findOne({_id: recipient.party_id}, {name: 1}, (err, partyInfo) => {
             callSendAPI(sender_psid, recipientDetailsPrompt(person, partyInfo.name));
           })
@@ -711,7 +709,7 @@ function callSendAPI(sender_psid, response) {
     "json": request_body
   }, (err, res, body) => {
     if (!err) {
-      console.log('message sent!', res, body)
+      console.log('message sent!');
     } else {
       console.error("Unable to send message:" + err);
     }
