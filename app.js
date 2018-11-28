@@ -99,6 +99,14 @@ app.get('/options', (req, res) => {
 
 app.get('/optionspostback', (req, res) => {
   let body = req.query;
+  _.mapObject(body,(val, key) => {
+    if (key !== 'note' && val.length == 0) {
+      console.log('Bad Input');
+      callSendAPI(body.psid, `We failed to create your party because you didnt input "${key}" correctly.`);
+      return;
+    }
+  });
+  console.log(body.psid);
   const partyInstance = new PartyModel({
     name: body.name,
     location: body.location,
@@ -108,6 +116,7 @@ app.get('/optionspostback', (req, res) => {
     participants: [
       body.psid
     ],
+    gifting: [],
     note: body.note
   });
   partyInstance.save((err, partyInfo) => {

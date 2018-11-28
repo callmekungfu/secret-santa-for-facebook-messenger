@@ -87,7 +87,7 @@
                 // error retrieving supported features
                 console.log(err, errmsage);
             });
-            $('#partyCreationForm input').blur((evt) => {
+            $('#partyCreationForm input').keydown((evt) => {
                 if($(this).val()) {
                     $('.weui-toptips').slideUp('fast');
                     $(evt.target).closest('.weui-cell').removeClass('weui-cell_warn');
@@ -114,6 +114,7 @@
                         date: $('input[name="date"]').val(),
                         budget: $('input[name="budget"]').val(),
                         note: $('input[name="note"]').val(),
+                        psid: $('#psid').val()
                     };
                     $.ajax('/optionspostback', {
                         method: 'GET',
