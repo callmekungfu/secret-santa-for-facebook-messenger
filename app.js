@@ -481,7 +481,6 @@ function handlePostback(sender_psid, postback) {
 }
 
 function postbackRecipients(sender_psid) {
-  console.log('called');
   UserModel.findOne({
     psid: sender_psid
   }, {recipients: 1}, (err, user) => {
@@ -490,7 +489,13 @@ function postbackRecipients(sender_psid) {
       callSendAPI(sender_psid, {
         text: "Failed to retrieve your recipients... This is likely our fault. Please try again later."
       });
-    } else if (user.recipients) {
+    } else {
+      if (user.recipients.length === 0) {
+        callSendAPI(sender_psid, {
+          text: 'You do not have any recipients!'
+        })
+        return;
+      }
       callSendAPI(sender_psid, {
         text: 'Here are your recipients! (Remember to keep it hush hush!)'
       })
