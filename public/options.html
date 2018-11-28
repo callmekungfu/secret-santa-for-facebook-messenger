@@ -46,13 +46,13 @@
         <div class="weui-cells weui-cells_form">
             <div class="weui-cell">
                 <div class="weui-cell__bd">
-                    <textarea class="weui-textarea" name="note" placeholder="Add a friendly note!" rows="3" spellcheck="true" style="z-index: auto; position: relative; line-height: 25px; font-size: 17px; transition: none 0s ease 0s; background: none 0% 0% / auto repeat scroll padding-box border-box rgb(255, 255, 255);"></textarea>
+                    <textarea class="weui-textarea" maxlength="200" name="note" placeholder="Add a friendly note!" rows="3" spellcheck="true" style="z-index: auto; position: relative; line-height: 25px; font-size: 17px; transition: none 0s ease 0s; background: none 0% 0% / auto repeat scroll padding-box border-box rgb(255, 255, 255);"></textarea>
                     <div class="weui-textarea-counter"><span>0</span>/200</div>
                 </div>
             </div>
         </div>
         <div class="weui-btn-area">
-            <button class="weui-btn weui-btn_primary" type="submit" id="submitButton"><i class="weui-loading hidden"></i> Submit</button>
+            <button class="weui-btn weui-btn_primary" type="submit" id="submitButton"><i class="weui-loading hidden"></i> Create Party</button>
         </div>
     </form>
     <script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
@@ -93,6 +93,11 @@
                     $(evt.target).closest('.weui-cell').removeClass('weui-cell_warn');
                 }
             });
+            $('textarea[name="note"]').keyup((evt) => {
+                var $this = $(evt.target);
+                var length = $this.val().length;
+                $('.weui-textarea-counter span').text(length);
+            });
             $('#partyCreationForm').submit((evt) => {
                 evt.preventDefault();
                 var noEmpty = true;
@@ -113,7 +118,7 @@
                         location: $('input[name="location"]').val(),
                         date: $('input[name="date"]').val(),
                         budget: $('input[name="budget"]').val(),
-                        note: $('input[name="note"]').val(),
+                        note: $('textarea[name="note"]').val(),
                         psid: $('#psid').val()
                     };
                     $.ajax('/optionspostback', {
