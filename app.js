@@ -40,7 +40,30 @@ app.listen(app.get('port'), () => {
 module.exports = app;
 
 app.get('/testing', (req, res) => {
-  res.send('No testing staged yet!');
+  // const { participants } = partyInfo;
+  PartyModel.findOne({_id: '5bfc88671debd54a7058e352'}, {participants: 1}, (err, partyInfo) => {
+    const { participants } = partyInfo;
+    console.log(partyInfo);
+    let gifting = [];
+    let recipients = [];
+    _.map(participants, (participant) => {
+      let pool = participants.slice(0);
+      pool.splice(pool.indexOf(participant), 1);
+      pool = _.difference(pool,recipients);
+      let recipient;
+      if (pool.length === 0) {
+        recipient = recipients[Math.floor(Math.random() * recipients.length)];
+      } else {
+        recipient = pool[Math.floor(Math.random() * pool.length)];
+      }
+      recipients.push(recipient);
+      gifting.push({
+        from: participant,
+        to: recipient
+      })
+    });
+    res.json({gifting});
+  });
 });
 
 // Accepts POST requests at the /webhook endpoint
@@ -398,6 +421,7 @@ app.get('/startpartypostback',(req, res) => {
     const { participants } = partyInfo;
     let gifting = [];
     let recipients = [];
+    console.log(partyInfo);
     _.map(participants, (participant) => {
       let pool = participants.slice(0);
       pool.splice(pool.indexOf(participant), 1);
