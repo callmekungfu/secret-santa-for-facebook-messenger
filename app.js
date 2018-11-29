@@ -413,7 +413,7 @@ app.get('/startparty', (req, res) => {
 app.get('/startpartypostback',(req, res) => {
   const { party_id, psid } = req.query;
   PartyModel.findOne({_id: party_id}, (err, partyInfo) => {
-    if (partyInfo.gifting) {
+    if (partyInfo.gifting.length > 0) {
       console.log("Game Already Started");
       callSendAPI(psid, {text: "You have already started the party!"});
       return;
@@ -421,7 +421,6 @@ app.get('/startpartypostback',(req, res) => {
     const { participants } = partyInfo;
     let gifting = [];
     let recipients = [];
-    console.log(partyInfo);
     _.map(participants, (participant) => {
       let pool = participants.slice(0);
       pool.splice(pool.indexOf(participant), 1);
