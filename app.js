@@ -581,7 +581,6 @@ function setRoomPreferences() {
             url: SERVER_URL + "/help",
             title: "What are parties?",
             webview_height_ratio: 'full',
-            messenger_extensions: true
           }
         ]
       }
