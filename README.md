@@ -24,15 +24,17 @@ Here is a list of technologies I used to accomplish this project (Rank by whatev
 All users joining the party must have facebook chat enabled. Otherwise they will not recieve any system notifications.
 
 ## Roadmap
-### Initial Release 1.0 (Currently)
+### ~~Initial Release 1.0~~
 - Party creation and invitation features
 - Name distribution, reminders
 - Database storage
 - Deploy to Heroku
 - I just want something that works c:
 
-### Version 1.5
+### Version 1.5 Public Release
 - Wishlists!
+- API tokenization
+- Help and more informations
 - No bugss!
 
 ### Version 2.0
