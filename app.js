@@ -40,7 +40,30 @@ app.listen(app.get('port'), () => {
 module.exports = app;
 
 app.get('/testing', (req, res) => {
-  res.send('No testing staged yet!');
+  // const { participants } = partyInfo;
+  PartyModel.findOne({_id: '5bfc88671debd54a7058e352'}, {participants: 1}, (err, partyInfo) => {
+    const { participants } = partyInfo;
+    console.log(partyInfo);
+    let gifting = [];
+    let recipients = [];
+    _.map(participants, (participant) => {
+      let pool = participants.slice(0);
+      pool.splice(pool.indexOf(participant), 1);
+      pool = _.difference(pool,recipients);
+      let recipient;
+      if (pool.length === 0) {
+        recipient = recipients[Math.floor(Math.random() * recipients.length)];
+      } else {
+        recipient = pool[Math.floor(Math.random() * pool.length)];
+      }
+      recipients.push(recipient);
+      gifting.push({
+        from: participant,
+        to: recipient
+      })
+    });
+    res.json({gifting});
+  });
 });
 
 // Accepts POST requests at the /webhook endpoint
@@ -106,7 +129,6 @@ app.get('/optionspostback', (req, res) => {
       return;
     }
   });
-  console.log(body.psid);
   const partyInstance = new PartyModel({
     name: body.name,
     location: body.location,
@@ -332,6 +354,27 @@ app.get('/partydetails', (req, res) => {
   });
 });
 
+app.get('/partymanagement', (req, res) => {
+  console.log(req.query);
+  const body = req.query;
+  switch (body.action) {
+    case 'DELETE':
+      PartyModel.findOneAndDelete({_id: body.party_id}, (err, result) => {
+        if (err) {
+          console.log(err);
+          callSendAPI(body.psid, {
+            text: `We failed to remove your party, please try again later.`
+          });
+        } else {
+          callSendAPI(body.psid, {
+            text: `Your party have been removed!`
+          });
+        }
+      })
+      break;
+  }
+});
+
 // Handles messages sent to the bot
 function handleMessage(sender_psid, received_message) {
   let response;
@@ -391,7 +434,7 @@ app.get('/startparty', (req, res) => {
 app.get('/startpartypostback',(req, res) => {
   const { party_id, psid } = req.query;
   PartyModel.findOne({_id: party_id}, (err, partyInfo) => {
-    if (partyInfo.gifting) {
+    if (partyInfo.gifting.length > 0) {
       console.log("Game Already Started");
       callSendAPI(psid, {text: "You have already started the party!"});
       return;
@@ -439,6 +482,10 @@ app.get('/startpartypostback',(req, res) => {
   }) 
 });
 
+app.get('/help', (req, res) => {
+  res.redirect('https://wangyonglin1999.gitbook.io/secretsanta/');
+});
+
 function handlePostback(sender_psid, postback) {
   let response;
   switch (postback.payload) {
@@ -460,28 +507,29 @@ function handlePostback(sender_psid, postback) {
       postbackRecipients(sender_psid);
       break;
     case 'MY_PROFILE':
-    callSendAPI(sender_psid, {
-      attachment: {
-        type: "template",
-        payload: {
-          template_type: "button",
-          "text": "This feature is still under development~~",
-          buttons: [{
-              type: "web_url",
-              url: SERVER_URL + "/roadmap",
-              title: "Development Roadmap",
-              webview_height_ratio: 'full',
-              messenger_extensions: true
-            }
-          ]
+      callSendAPI(sender_psid, {
+        attachment: {
+          type: "template",
+          payload: {
+            template_type: "button",
+            "text": "This feature is still under development~~",
+            buttons: [{
+                type: "web_url",
+                url: SERVER_URL + "/roadmap",
+                title: "Development Roadmap",
+                webview_height_ratio: 'full',
+                messenger_extensions: true
+              }
+            ]
+          }
         }
-      }
-    });
+      });
+      break;
+    
   }
 }
 
 function postbackRecipients(sender_psid) {
-  console.log('called');
   UserModel.findOne({
     psid: sender_psid
   }, {recipients: 1}, (err, user) => {
@@ -490,18 +538,27 @@ function postbackRecipients(sender_psid) {
       callSendAPI(sender_psid, {
         text: "Failed to retrieve your recipients... This is likely our fault. Please try again later."
       });
-    } else if (user.recipients) {
+    } else if (user){
+      if (user.recipients.length === 0) {
+        callSendAPI(sender_psid, {
+          text: 'You do not have any recipients. If you are already in a party, please inform the owner to start the party.'
+        })
+        return;
+      }
       callSendAPI(sender_psid, {
         text: 'Here are your recipients! (Remember to keep it hush hush!)'
       })
       _.map(user.recipients, (recipient,i) => {
         UserModel.findOne({psid: recipient.id}, {name: 1, profile: 1} , (err, person) => {
-          console.log(person);
           PartyModel.findOne({_id: recipient.party_id}, {name: 1}, (err, partyInfo) => {
             callSendAPI(sender_psid, recipientDetailsPrompt(person, partyInfo.name));
           })
         });
       });
+    } else {
+      callSendAPI(sender_psid, {
+        text: 'You are not in any parties! Please start or join a party then come back.'
+      })
     }
   });
 }
@@ -547,7 +604,6 @@ function setRoomPreferences() {
             url: SERVER_URL + "/help",
             title: "What are parties?",
             webview_height_ratio: 'full',
-            messenger_extensions: true
           }
         ]
       }
@@ -599,6 +655,53 @@ function afterPartyCreation(body, party_id) {
 }
 
 function partyDetailsPrompt(party) {
+  // If party already started
+  let buttons = [
+    {
+      type: 'web_url',
+      url: SERVER_URL + '/partydetails?party_id=' + party._id,
+      messenger_extensions: true,
+      title: "More Details",
+      webview_height_ratio: 'tall'
+    }
+  ]
+  if (party.gifting.length === 0) {
+    const body = party;
+    buttons.push({
+      type: "element_share",
+      share_contents: {
+        attachment: {
+          type: "template",
+          payload: {
+            template_type: 'generic',
+            elements: [{
+              title: `You are invited to ${body.name} Party!`,
+              subtitle: `More Details:\n\nLocation: ${body.location}\nDate:${moment(body.date).format('MMMM Do YYYY, h:mm a')}\nBudget:$${body.budget}\n\nJoin Now!`,
+              default_action: {
+                type: 'web_url',
+                url: SERVER_URL + `/invitation?party_id=` + party._id,
+                messenger_extensions: true,
+                webview_height_ratio: 'tall'
+              },
+              buttons: [{
+                type: "web_url",
+                title: "Join Now!",
+                url: SERVER_URL + '/invitation?party_id=' + party._id,
+                messenger_extensions: true,
+                webview_height_ratio: 'tall'
+              }]
+            }]
+          }
+        }
+      }
+    }, {
+      type: "web_url",
+      title: "Start Party!",
+      url: SERVER_URL + '/startparty?party_id=' + party._id,
+      messenger_extensions: true,
+      webview_height_ratio: 'tall'
+    })
+  }
   return {
     attachment: {
       type: "template",
@@ -614,13 +717,7 @@ function partyDetailsPrompt(party) {
             messenger_extensions: true,
             webview_height_ratio: 'tall'
           },
-          buttons: [{
-            type: "web_url",
-            title: "Start Party!",
-            url: SERVER_URL + '/startparty?party_id=' + party._id,
-            messenger_extensions: true,
-            webview_height_ratio: 'tall'
-          }]
+          buttons
         }]
       }
     }
@@ -702,7 +799,7 @@ function callSendAPI(sender_psid, response) {
     "json": request_body
   }, (err, res, body) => {
     if (!err) {
-      console.log('message sent!')
+      console.log('message sent!');
     } else {
       console.error("Unable to send message:" + err);
     }

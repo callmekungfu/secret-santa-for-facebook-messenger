@@ -118,6 +118,13 @@
                     console.log(err);
                 });
             });
+            $('#close').click(() => {
+                MessengerExtensions.requestCloseBrowser(function success() {
+                    console.log("Webview closing");
+                }, function error(err) {
+                    console.log(err);
+                });
+            });
         };
     </script>
 </body>
