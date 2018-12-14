@@ -354,6 +354,27 @@ app.get('/partydetails', (req, res) => {
   });
 });
 
+app.get('/partymanagement', (req, res) => {
+  console.log(req.query);
+  const body = req.query;
+  switch (body.action) {
+    case 'DELETE':
+      PartyModel.findOneAndDelete({_id: body.party_id}, (err, result) => {
+        if (err) {
+          console.log(err);
+          callSendAPI(body.psid, {
+            text: `We failed to remove your party, please try again later.`
+          });
+        } else {
+          callSendAPI(body.psid, {
+            text: `Your party have been removed!`
+          });
+        }
+      })
+      break;
+  }
+});
+
 // Handles messages sent to the bot
 function handleMessage(sender_psid, received_message) {
   let response;
@@ -486,23 +507,25 @@ function handlePostback(sender_psid, postback) {
       postbackRecipients(sender_psid);
       break;
     case 'MY_PROFILE':
-    callSendAPI(sender_psid, {
-      attachment: {
-        type: "template",
-        payload: {
-          template_type: "button",
-          "text": "This feature is still under development~~",
-          buttons: [{
-              type: "web_url",
-              url: SERVER_URL + "/roadmap",
-              title: "Development Roadmap",
-              webview_height_ratio: 'full',
-              messenger_extensions: true
-            }
-          ]
+      callSendAPI(sender_psid, {
+        attachment: {
+          type: "template",
+          payload: {
+            template_type: "button",
+            "text": "This feature is still under development~~",
+            buttons: [{
+                type: "web_url",
+                url: SERVER_URL + "/roadmap",
+                title: "Development Roadmap",
+                webview_height_ratio: 'full',
+                messenger_extensions: true
+              }
+            ]
+          }
         }
-      }
-    });
+      });
+      break;
+    
   }
 }
 
@@ -632,6 +655,53 @@ function afterPartyCreation(body, party_id) {
 }
 
 function partyDetailsPrompt(party) {
+  // If party already started
+  let buttons = [
+    {
+      type: 'web_url',
+      url: SERVER_URL + '/partydetails?party_id=' + party._id,
+      messenger_extensions: true,
+      title: "More Details",
+      webview_height_ratio: 'tall'
+    }
+  ]
+  if (party.gifting.length === 0) {
+    const body = party;
+    buttons.push({
+      type: "element_share",
+      share_contents: {
+        attachment: {
+          type: "template",
+          payload: {
+            template_type: 'generic',
+            elements: [{
+              title: `You are invited to ${body.name} Party!`,
+              subtitle: `More Details:\n\nLocation: ${body.location}\nDate:${moment(body.date).format('MMMM Do YYYY, h:mm a')}\nBudget:$${body.budget}\n\nJoin Now!`,
+              default_action: {
+                type: 'web_url',
+                url: SERVER_URL + `/invitation?party_id=` + party._id,
+                messenger_extensions: true,
+                webview_height_ratio: 'tall'
+              },
+              buttons: [{
+                type: "web_url",
+                title: "Join Now!",
+                url: SERVER_URL + '/invitation?party_id=' + party._id,
+                messenger_extensions: true,
+                webview_height_ratio: 'tall'
+              }]
+            }]
+          }
+        }
+      }
+    }, {
+      type: "web_url",
+      title: "Start Party!",
+      url: SERVER_URL + '/startparty?party_id=' + party._id,
+      messenger_extensions: true,
+      webview_height_ratio: 'tall'
+    })
+  }
   return {
     attachment: {
       type: "template",
@@ -647,13 +717,7 @@ function partyDetailsPrompt(party) {
             messenger_extensions: true,
             webview_height_ratio: 'tall'
           },
-          buttons: [{
-            type: "web_url",
-            title: "Start Party!",
-            url: SERVER_URL + '/startparty?party_id=' + party._id,
-            messenger_extensions: true,
-            webview_height_ratio: 'tall'
-          }]
+          buttons
         }]
       }
     }
