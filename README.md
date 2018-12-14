@@ -32,12 +32,13 @@ All users joining the party must have facebook chat enabled. Otherwise they will
 - I just want something that works c:
 
 ### Version 1.5 Public Release
-- Wishlists!
 - API tokenization
+- Profiles
 - Help and more informations
 - No bugss!
 
 ### Version 2.0
+- Wishlists!
 - Party Announcements! (No clue why this is necessary)
 - Gift recommendation based on wishlists!
 
