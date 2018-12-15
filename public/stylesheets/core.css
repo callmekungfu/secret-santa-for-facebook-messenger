@@ -28,6 +28,14 @@ body {
     text-align: center;
 }
 
+.text-muted {
+    color: gray;
+}
+
+.img-responsive {
+    max-width: 100%;
+}
+
 .img-responsive_50 {
     max-width: 50%;
 }
@@ -74,4 +82,9 @@ body {
 
 .hidden {
     display: none;
+}
+
+.profile-container {
+    width: 50%;
+    margin: 0 auto;
 }

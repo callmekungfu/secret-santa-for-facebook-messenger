@@ -40,30 +40,6 @@ app.listen(app.get('port'), () => {
 module.exports = app;
 
 app.get('/testing', (req, res) => {
-  // const { participants } = partyInfo;
-  PartyModel.findOne({_id: '5bfc88671debd54a7058e352'}, {participants: 1}, (err, partyInfo) => {
-    const { participants } = partyInfo;
-    console.log(partyInfo);
-    let gifting = [];
-    let recipients = [];
-    _.map(participants, (participant) => {
-      let pool = participants.slice(0);
-      pool.splice(pool.indexOf(participant), 1);
-      pool = _.difference(pool,recipients);
-      let recipient;
-      if (pool.length === 0) {
-        recipient = recipients[Math.floor(Math.random() * recipients.length)];
-      } else {
-        recipient = pool[Math.floor(Math.random() * pool.length)];
-      }
-      recipients.push(recipient);
-      gifting.push({
-        from: participant,
-        to: recipient
-      })
-    });
-    res.json({gifting});
-  });
 });
 
 // Accepts POST requests at the /webhook endpoint
@@ -375,6 +351,23 @@ app.get('/partymanagement', (req, res) => {
   }
 });
 
+app.get('/profile', (req, res) => {
+  let referer = req.get('Referer');
+  let { psid } = req.query
+  if (referer) {
+    if (referer.indexOf('www.messenger.com') >= 0) {
+      res.setHeader('X-Frame-Options', 'ALLOW-FROM https://www.messenger.com/');
+    } else if (referer.indexOf('www.facebook.com') >= 0) {
+      res.setHeader('X-Frame-Options', 'ALLOW-FROM https://www.facebook.com/');
+    }
+    UserModel.findOne({psid}, (err, user) => {
+      res.render('profile', {
+        user
+      });
+    })
+  }
+});
+
 // Handles messages sent to the bot
 function handleMessage(sender_psid, received_message) {
   let response;
@@ -507,21 +500,29 @@ function handlePostback(sender_psid, postback) {
       postbackRecipients(sender_psid);
       break;
     case 'MY_PROFILE':
-      callSendAPI(sender_psid, {
-        attachment: {
-          type: "template",
-          payload: {
-            template_type: "button",
-            "text": "This feature is still under development~~",
-            buttons: [{
-                type: "web_url",
-                url: SERVER_URL + "/roadmap",
-                title: "Development Roadmap",
-                webview_height_ratio: 'full',
-                messenger_extensions: true
+      UserModel.findOne({psid: sender_psid}, {name: 1}, (err, user) => {
+        if (err) {
+          callSendAPI(sender_psid, {text: `Failed to retrieve your profile, please try again later`});
+        } else if (user) {
+          callSendAPI(sender_psid, {
+            attachment: {
+              type: "template",
+              payload: {
+                template_type: "button",
+                text: `Hi ${user.name}, click on the button to view your profile.`,
+                buttons: [{
+                    type: "web_url",
+                    url: SERVER_URL + "/profile?psid=" + sender_psid,
+                    title: "My Profile",
+                    webview_height_ratio: 'tall',
+                    messenger_extensions: true
+                  }
+                ]
               }
-            ]
-          }
+            }
+          });
+        } else {
+          callSendAPI(sender_psid, {text: `We don't have a profile for you! A profile will be automatically created when you accept an invitation or create a party!`});
         }
       });
       break;

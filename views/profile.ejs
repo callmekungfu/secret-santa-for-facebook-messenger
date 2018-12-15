@@ -11,10 +11,13 @@
     <input type="text" id="psid" hidden />
     <div class="container flexed v-center full-height">
         <div class="inner">
-            <img src="<%= user.profile %>">
-            <h2 class="text-centered mb-25"><span id="partyName"><%= user.name %></span></h2>
+            <div class="profile-container mb-25">
+                <img src="<%= user.profile %>" class="img-responsive img-profile">
+            </div>
+            <h2 class="text-centered mb-25">Hello <%= user.name %>!</h2>
+            <p class="text-muted text-centered">This page details everything the app knows about you. To remove yourself completely from the app, simply click on the button below and delete the conversation in Messenger. (Note: This will remove you from all parties that haven't started yet.)</p>
             <div class="weui-btn-area">
-                <button class="weui-btn weui-btn_warn" id="close">Remove My Profile</button>
+                <button class="weui-btn weui-btn_warn" id="deleteUser">Delete Me From The App</button>
                 <button class="weui-btn weui-btn_default" id="close">Close</button>
             </div>
         </div>
