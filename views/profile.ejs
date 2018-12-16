@@ -8,7 +8,7 @@
 </head>
 
 <body>
-    <input type="text" id="psid" hidden />
+    <input type="text" id="psid" value="<%= user.psid %>" hidden />
     <div class="container flexed v-center full-height">
         <div class="inner">
             <div class="profile-container mb-25">
@@ -44,6 +44,24 @@
                 }, function error(err) {
                     console.log(err);
                 });
+            });
+            $('#deleteUser').click(() => {
+                if (confirm('Are you sure you want to delete your profile? This will remove you from all parties that haven\'t started yet.')) {
+                    const content = {
+                        action: 'DELETE_USER',
+                        psid: $('#psid').val()
+                    };
+                    $.ajax('/partymanagement', {
+                        contentType: 'application/json',
+                        data: content,
+                        type: 'GET'
+                    })
+                    MessengerExtensions.requestCloseBrowser(function success() {
+                        console.log("Webview closing");
+                    }, function error(err) {
+                        console.log(err);
+                    });
+                } 
             });
         };
     </script>

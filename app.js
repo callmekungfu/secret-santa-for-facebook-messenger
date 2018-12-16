@@ -331,7 +331,6 @@ app.get('/partydetails', (req, res) => {
 });
 
 app.get('/partymanagement', (req, res) => {
-  console.log(req.query);
   const body = req.query;
   switch (body.action) {
     case 'DELETE':
@@ -348,6 +347,27 @@ app.get('/partymanagement', (req, res) => {
         }
       })
       break;
+    case 'DELETE_USER':
+      UserModel.findOneAndDelete({psid: body.psid}, (err, userInfo) => {
+        if (err) {
+          console.log(err);
+          callSendAPI(body.psid, {
+            text: `Sorry... We failed to remove your profile, please try again later. Or contact us: hi@yonglinwang.ca.`
+          });
+        } else {
+          // Remove all parties that the user owns
+          if (userInfo.parties.length > 0) {
+            _.map(userInfo.parties, (partyID) => {
+              disbandParty(partyID, "Party Owner removed his account");
+            });
+          }
+          // Remove user from all unstarted parties that contain the user
+          PartyModel.update({gifting: {$size: 0}},{$pull: {participants: body.psid}});
+          callSendAPI(body.psid, {
+            text: `We have removed your profile from our database. Delete this conversation to completely remove your account. It's sad to see you go, good luck in the future! :^)`
+          });
+        }
+      });
   }
 });
 
@@ -581,6 +601,19 @@ function postbackParties(sender_psid) {
       callSendAPI(sender_psid, {
         text: "You haven't created any party yet! Click on <Create a party> bellow to get started!"
       });
+    }
+  })
+}
+
+function disbandParty(partyID, reason) {
+  PartyModel.findOne({_id: partyID}, {name:1, participants: 1, gifting: 1}, (err, party) => {
+    if (gifting.length === 0) {
+      _.map(party.participants, (participant) => {
+        callSendAPI(participant, {
+          text: `${party.name} has been disbanded! Because: ${reason}.`
+        })
+      })
+      PartyModel.deleteOne({_id: partyID});
     }
   })
 }
