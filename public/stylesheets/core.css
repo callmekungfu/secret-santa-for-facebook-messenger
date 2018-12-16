@@ -32,6 +32,10 @@ body {
     color: gray;
 }
 
+.footnote {
+    font-size: 0.6em
+}
+
 .img-responsive {
     max-width: 100%;
 }
@@ -46,6 +50,14 @@ body {
 
 .mb-25 {
     margin-bottom: 25px;
+}
+
+.mb-50 {
+    margin-bottom: 50px;
+}
+
+.mt-50 {
+    margin-top: 50px;
 }
 
 .create_by {
@@ -85,6 +97,10 @@ body {
 }
 
 .profile-container {
-    width: 50%;
+    width: 35%;
     margin: 0 auto;
+}
+
+.wishlist-remove {
+    cursor: pointer;
 }

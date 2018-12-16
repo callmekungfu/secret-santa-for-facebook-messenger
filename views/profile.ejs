@@ -9,20 +9,37 @@
 
 <body>
     <input type="text" id="psid" value="<%= user.psid %>" hidden />
-    <div class="container flexed v-center full-height">
+    <div class="container mt-50">
         <div class="inner">
             <div class="profile-container mb-25">
                 <img src="<%= user.profile %>" class="img-responsive img-profile">
             </div>
-            <h2 class="text-centered mb-25">Hello <%= user.name %>!</h2>
-            <p class="text-muted text-centered">This page details everything the app knows about you. To remove yourself completely from the app, simply click on the button below and delete the conversation in Messenger. (Note: This will remove you from all parties that haven't started yet.)</p>
-            <div class="weui-btn-area">
-                <button class="weui-btn weui-btn_warn" id="deleteUser">Delete Me From The App</button>
-                <button class="weui-btn weui-btn_default" id="close">Close</button>
+            <h2 class="text-centered mb-25">Hello
+                <%= user.name %>!</h2>
+        </div>
+    </div>
+    <div class="wishlist-container mb-50">
+        <h3 class="weui-cells__title">Your Wishlist</h3>
+        <div class="weui-cells">
+            <div class="wishlist-items">
+            </div>
+            <div class="weui-cell weui-cell_vcode">
+                <div class="weui-cell__bd">
+                    <input class="weui-input" type="text" id="wishlistInput" placeholder="New Item (Enter to Add)">
+                </div>
+                <div class="weui-cell__ft">
+                    <button class="weui-vcode-btn" id="wishlistAddButton">Add</button>
+                </div>
             </div>
         </div>
     </div>
-
+    <div class="weui-btn-area">
+        <button class="weui-btn weui-btn_warn" id="deleteUser">Delete Me From The App</button>
+        <button class="weui-btn weui-btn_default mb-25" id="close">Close</button>
+        <p class="text-muted text-centered footnote">This page details everything the app knows about you. To remove
+            yourself completely from the app, simply click on the button below and delete the conversation in
+            Messenger. (Note: This will remove you from all parties that haven't started yet.)</p>
+    </div>
     <script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
         crossorigin="anonymous"></script>
     <script>
@@ -46,7 +63,9 @@
                 });
             });
             $('#deleteUser').click(() => {
-                if (confirm('Are you sure you want to delete your profile? This will remove you from all parties that haven\'t started yet.')) {
+                if (confirm(
+                        'Are you sure you want to delete your profile? This will remove you from all parties that haven\'t started yet.'
+                    )) {
                     const content = {
                         action: 'DELETE_USER',
                         psid: $('#psid').val()
@@ -61,9 +80,42 @@
                     }, function error(err) {
                         console.log(err);
                     });
-                } 
+                }
             });
+
+            $('#wishlistInput').keydown((evt) => {
+                // When Enter is hit
+                if (evt.keyCode == 13) {
+                    newWishlistItem();
+                }
+            });
+
+            $('#wishlistAddButton').click(() => {
+                newWishlistItem();
+            });
+
         };
+
+        function newWishlistItem() {
+            const item = $('#wishlistInput').val();
+            $('.wishlist-items').append(
+                `
+                        <div class="weui-cell wishlist-item">
+                            <div class="weui-cell__bd">
+                                <p>${item}</p>
+                            </div>
+                            <div class="weui-cell__ft wishlist-remove"><span>&times;</span></div>
+                        </div>
+                    `
+            );
+            $('.wishlist-remove').click((evt) => {
+                const $target = $(evt.target).closest('.wishlist-item');
+                $target.slideUp('fast', () => {
+                    $target.remove();
+                });
+            });
+            $('#wishlistInput').val('');
+        }
     </script>
 </body>
 
