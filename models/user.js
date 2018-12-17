@@ -32,7 +32,7 @@ const UserSchema = new Schema({
         required: true
     },
     wishlist: {
-        type: [String],
+        type: [Object],
         required: true
     },
     recipients: {

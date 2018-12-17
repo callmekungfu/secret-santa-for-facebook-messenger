@@ -22,6 +22,16 @@
         <h3 class="weui-cells__title">Your Wishlist</h3>
         <div class="weui-cells">
             <div class="wishlist-items">
+                <% user.wishlist.forEach(function(item) { %>
+                <div class="weui-cell wishlist-item" id="<%= item.id %>">
+                    <div class="weui-cell__bd">
+                        <p>
+                            <%= item.name %>
+                        </p>
+                    </div>
+                    <div class="weui-cell__ft wishlist-remove"><span>&times;</span></div>
+                </div>
+                <% }); %>
             </div>
             <div class="weui-cell weui-cell_vcode">
                 <div class="weui-cell__bd">
@@ -94,27 +104,80 @@
                 newWishlistItem();
             });
 
+            $('.wishlist-remove').click((evt) => {
+                const $target = $(evt.target).closest('.wishlist-item');
+                const id = $target.attr('id');
+                const content = {
+                    action: 'REMOVE',
+                    psid: $('#psid').val(),
+                    id: id
+                }
+                $.ajax('/wishlist', {
+                    contentType: 'application/json',
+                    data: content,
+                    type: 'GET'
+                });
+                $target.slideUp('fast', () => {
+                    $target.remove();
+                });
+            });
+
         };
 
         function newWishlistItem() {
             const item = $('#wishlistInput').val();
-            $('.wishlist-items').append(
-                `
-                        <div class="weui-cell wishlist-item">
+            if (item.length > 0) {
+                const itemID = makeid();
+                const content = {
+                    action: 'ADD',
+                    psid: $('#psid').val(),
+                    name: item,
+                    id: itemID
+                }
+                $.ajax('/wishlist', {
+                    contentType: 'application/json',
+                    data: content,
+                    type: 'GET'
+                });
+                $('.wishlist-items').append(
+                    `
+                        <div class="weui-cell wishlist-item" id="${itemID}">
                             <div class="weui-cell__bd">
                                 <p>${item}</p>
                             </div>
                             <div class="weui-cell__ft wishlist-remove"><span>&times;</span></div>
                         </div>
                     `
-            );
-            $('.wishlist-remove').click((evt) => {
-                const $target = $(evt.target).closest('.wishlist-item');
-                $target.slideUp('fast', () => {
-                    $target.remove();
+                );
+                $('.wishlist-remove').click((evt) => {
+                    const $target = $(evt.target).closest('.wishlist-item');
+                    const id = $target.attr('id');
+                    const content = {
+                        action: 'REMOVE',
+                        psid: $('#psid').val(),
+                        id: id
+                    }
+                    $.ajax('/wishlist', {
+                        contentType: 'application/json',
+                        data: content,
+                        type: 'GET'
+                    });
+                    $target.slideUp('fast', () => {
+                        $target.remove();
+                    });
                 });
-            });
-            $('#wishlistInput').val('');
+                $('#wishlistInput').val('');
+            }
+        }
+
+        function makeid() {
+            var text = "";
+            var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+
+            for (var i = 0; i < 10; i++)
+                text += possible.charAt(Math.floor(Math.random() * possible.length));
+
+            return text;
         }
     </script>
 </body>

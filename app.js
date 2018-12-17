@@ -56,14 +56,6 @@ module.exports = app;
 
 // Testing method, should be emptied in production environment
 app.get('/testing', (req, res) => {
-  TokenModel.findOneAndDelete({token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwc2lkIjoiMjExOTczNDY5MTQyNDM2NiIsImlhdCI6MTU0NTA4NTUyNSwiZXhwIjoxNTQ1MDkyNzI1fQ.b1pvrQ83TIS0JekTU-XEEYEC45OEoxM2JvqR2VYwSK8'}, (err, record) => {
-    if (err) {
-      console.log(err);
-    }
-  });
-  // TokenModel.findOne({token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwc2lkIjoiMjExOTczNDY5MTQyNDM2NiIsImlhdCI6MTU0NTA4NTUyNSwiZXhwIjoxNTQ1MDkyNzI1fQ.b1pvrQ83TIS0JekTU-XEEYEC45OEoxM2JvqR2VYwSK8'}, (err, record) => {
-  //   res.json(record);
-  // });
 });
 
 // Accepts POST requests at the /webhook endpoint
@@ -510,6 +502,35 @@ app.get('/profile', (req, res) => {
     })
   }
 });
+
+app.get('/wishlist', (req, res) => {
+  const body = req.query;
+  switch(body.action) {
+    case 'ADD':
+      UserModel.findOneAndUpdate({psid: body.psid}, {$push: {
+        wishlist: {
+          name: body.name,
+          id: body.id
+        }
+      }}, (err, results) => {
+        if (err) {
+          console.log(err);
+        }
+      })
+      break;
+    case 'REMOVE':
+      UserModel.findOneAndUpdate({psid: body.psid}, {$pull: {
+        wishlist: {
+          id: body.id
+        }
+      }}, (err, results) => {
+        if (err) {
+          console.log(err);
+        }
+      })
+      break;
+  }
+})
 
 // Handles messages sent to the bot
 function handleMessage(sender_psid, received_message) {
