@@ -532,28 +532,6 @@ app.get('/wishlist', (req, res) => {
   }
 })
 
-// Handles messages sent to the bot
-function handleMessage(sender_psid, received_message) {
-  let response;
-  if (received_message.text) {
-    switch (received_message.text.replace(/[^\w\s]/gi, '').trim().toLowerCase()) {
-      case "create party":
-        response = setRoomPreferences(sender_psid);
-        break;
-      default:
-        response = {
-          "text": `You sent the message: "${received_message.text}".`
-        };
-        break;
-    }
-  } else {
-    response = {
-      "text": `Sorry I don't understand you...`
-    }
-  }
-  callSendAPI(sender_psid, response);
-}
-
 app.get('/startparty', (req, res) => {
   let referer = req.get('Referer');
   let {
@@ -666,6 +644,28 @@ app.get('/startpartypostback', (req, res) => {
   })
 });
 
+// Handles messages sent to the bot
+function handleMessage(sender_psid, received_message) {
+  let response;
+  if (received_message.text) {
+    switch (received_message.text.replace(/[^\w\s]/gi, '').trim().toLowerCase()) {
+      case "create party":
+        response = setRoomPreferences(sender_psid);
+        break;
+      default:
+        response = {
+          "text": `You sent the message: "${received_message.text}".`
+        };
+        break;
+    }
+  } else {
+    response = {
+      "text": `Sorry I don't understand you...`
+    }
+  }
+  callSendAPI(sender_psid, response);
+}
+
 app.get('/help', (req, res) => {
   res.redirect('https://wangyonglin1999.gitbook.io/secretsanta/');
 });
@@ -754,7 +754,8 @@ function postbackRecipients(sender_psid) {
           psid: recipient.id
         }, {
           name: 1,
-          profile: 1
+          profile: 1,
+          wishlist: 1
         }, (err, person) => {
           PartyModel.findOne({
             _id: recipient.party_id
@@ -970,6 +971,10 @@ function partyDetailsPrompt(party) {
 }
 
 function recipientDetailsPrompt(user, party) {
+  let wishlist = '';
+  _.map(user.wishlist, (item) => {
+    wishlist += `- ${item}\n`
+  });
   return {
     attachment: {
       type: "template",
@@ -977,6 +982,7 @@ function recipientDetailsPrompt(user, party) {
         template_type: 'generic',
         elements: [{
           title: `${user.name}`,
+          subtitle: `Wishlist: \n${wishlist}`,
           image_url: user.profile,
           subtitle: party,
         }]
