@@ -1,0 +1,143 @@
+<html>
+
+<head>
+    <title>Create Party</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="/stylesheets/style.css">
+    <link rel="stylesheet" href="/stylesheets/core.css">
+</head>
+
+<body>
+    <input type="text" id="token" value="<%= content.token %>" hidden />
+    <div class="weui-toptips weui-toptips_warn js_tooltips">Oops, there is a problem with your input...</div>
+    <form id="partyCreationForm">
+        <input type="hidden" name="psid" id="psid">
+        <h3 class="weui-cells__title">Party Name</h3>
+        <div class="weui-cells">
+            <div class="weui-cell">
+                <div class="weui-cell__bd">
+                    <input class="weui-input party-name" type="text" value="Randomized Party Name" name="name" placeholder="Enter a Name">
+                </div>
+            </div>
+        </div>
+        
+        <h3 class="weui-cells__title">Details</h3>
+        <div class="weui-cells weui-cells_form">
+            <div class="weui-cell">
+                <div class="weui-cell__hd"><label class="weui-label">Location</label></div>
+                <div class="weui-cell__bd">
+                    <input class="weui-input" type="text" name="location" placeholder="Where's the party?">
+                </div>
+            </div>
+            <div class="weui-cell">
+                <div class="weui-cell__hd"><label class="weui-label">Date</label></div>
+                <div class="weui-cell__bd">
+                    <input class="weui-input" type="datetime-local" name="date" placeholder="enter date" value="2018-12-21T12:00">
+                </div>
+            </div>
+            <div class="weui-cell">
+                <div class="weui-cell__hd"><label class="weui-label">Budget</label></div>
+                <div class="weui-cell__bd">
+                    <input class="weui-input" type="number" pattern="^[0-9]+(\.[0-9]{1,2})?$" name="budget" placeholder="Enter your budget">
+                </div>
+            </div>
+        </div>
+        
+        <h3 class="weui-cells__title">Note</h3>
+        <div class="weui-cells weui-cells_form">
+            <div class="weui-cell">
+                <div class="weui-cell__bd">
+                    <textarea class="weui-textarea" maxlength="200" name="note" placeholder="Add a friendly note!" rows="3" spellcheck="true" style="z-index: auto; position: relative; line-height: 25px; font-size: 17px; transition: none 0s ease 0s; background: none 0% 0% / auto repeat scroll padding-box border-box rgb(255, 255, 255);"></textarea>
+                    <div class="weui-textarea-counter"><span>0</span>/200</div>
+                </div>
+            </div>
+        </div>
+        <div class="weui-btn-area">
+            <button class="weui-btn weui-btn_primary" type="submit" id="submitButton"><i class="weui-loading hidden"></i> Create Party</button>
+        </div>
+    </form>
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
+    <script>
+        (function (d, s, id) {
+            var js, fjs = d.getElementsByTagName(s)[0];
+            if (d.getElementById(id)) {
+                return;
+            }
+            js = d.createElement(s);
+            js.id = id;
+            js.src = "//connect.facebook.com/en_US/messenger.Extensions.js";
+            fjs.parentNode.insertBefore(js, fjs);
+        }(document, 'script', 'Messenger'));
+        window.extAsyncInit = () => {
+            MessengerExtensions.getSupportedFeatures(function success(result) {
+                let features = result.supported_features;
+                console.log('testing');
+                if (features.includes("context")) {
+                    MessengerExtensions.getContext('1962533450482760',
+                        function success(thread_context) {
+                            // success
+                            document.getElementById("psid").value = thread_context.psid;
+                        },
+                        function error(err) {
+                            // error
+                            console.log(err);
+                        }
+                    );
+                }
+            }, function error(err, errmsage) {
+                // error retrieving supported features
+                console.log(err, errmsage);
+            });
+            $('#partyCreationForm input').keydown((evt) => {
+                if($(this).val()) {
+                    $('.weui-toptips').slideUp('fast');
+                    $(evt.target).closest('.weui-cell').removeClass('weui-cell_warn');
+                }
+            });
+            $('textarea[name="note"]').keyup((evt) => {
+                var $this = $(evt.target);
+                var length = $this.val().length;
+                $('.weui-textarea-counter span').text(length);
+            });
+            $('#partyCreationForm').submit((evt) => {
+                evt.preventDefault();
+                var noEmpty = true;
+                $('#submitButton').toggleClass('weui-btn_loading');
+                $('.weui-loading').toggleClass('hidden');
+                $('#partyCreationForm input').each(function(){
+                    if( !$(this).val() ) {
+                        $(this).closest('.weui-cell').addClass('weui-cell_warn');
+                        noEmpty = false;
+                        $('.weui-toptips').slideDown('fast');
+                        $('#submitButton').toggleClass('weui-btn_loading');
+                        $('.weui-loading').toggleClass('hidden');
+                    }
+                });
+                if(noEmpty) {
+                    const body = {
+                        name: $('input[name="name"]').val(),
+                        location: $('input[name="location"]').val(),
+                        date: $('input[name="date"]').val(),
+                        budget: $('input[name="budget"]').val(),
+                        note: $('textarea[name="note"]').val(),
+                        psid: $('#psid').val(),
+                        token: $('#token').val()
+                    };
+                    $.ajax('/optionspostback', {
+                        method: 'GET',
+                        data: body,
+                        contentType: 'application/json',
+                    }).done((data) => {
+                        MessengerExtensions.requestCloseBrowser(function success() {
+                            console.log("Webview closing");
+                        }, function error(err) {
+                            console.log(err);
+                        });
+                    });
+                }
+            });
+        };
+    </script>
+</body>
+
+</html>

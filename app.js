@@ -1,6 +1,5 @@
 'use strict';
-
-// Imports dependencies and set up http server
+// Import libraries
 const
   request = require('request'),
   express = require('express'),
@@ -8,38 +7,61 @@ const
   moment = require('moment'),
   mongoose = require('mongoose'),
   _ = require('underscore'),
+  jwt = require('jsonwebtoken'),
   dotenv = require('dotenv').config();
 
+// Import database models
 const
   PartyModel = require('./models/party'),
-  UserModel = require('./models/user');
+  UserModel = require('./models/user'),
+  TokenModel = require('./models/tokens');
 
+// Define express instance
 var app = express();
 
+// Define server configurations
 app.set('view engine', 'ejs');
 app.set('port', process.env.PORT || 5000);
 app.use(body_parser.json());
 app.use(express.static('public'));
 
+// Define environmental process variables
 const PAGE_ACCESS_TOKEN = process.env.PAGE_ACCESS_TOKEN;
 const SERVER_URL = process.env.SERVER_URL;
 const APP_SECRET = process.env.APP_SECRET;
 const MONGO_URL = process.env.MONGO_URL;
+const JWT_CERT = process.env.JWT_CERT
 
+// Connect to mongo database
 mongoose.connect(MONGO_URL, {
   useNewUrlParser: true
 });
+
+// Define promise function for mongoDB
 mongoose.Promise = global.Promise;
+
+// verify connection
 const db = mongoose.connection;
 db.on('error', console.error.bind(console, 'MongoDB Connection Error: '))
 
+// Start server and listen to requests from port
 app.listen(app.get('port'), () => {
-  console.log('Node app is running on port', app.get('port'));
+  console.log('Secret Santa For Friends Server is running on port', app.get('port'));
 });
 
+// In case app needs to be exported
 module.exports = app;
 
+// Testing method, should be emptied in production environment
 app.get('/testing', (req, res) => {
+  TokenModel.findOneAndDelete({token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwc2lkIjoiMjExOTczNDY5MTQyNDM2NiIsImlhdCI6MTU0NTA4NTUyNSwiZXhwIjoxNTQ1MDkyNzI1fQ.b1pvrQ83TIS0JekTU-XEEYEC45OEoxM2JvqR2VYwSK8'}, (err, record) => {
+    if (err) {
+      console.log(err);
+    }
+  });
+  // TokenModel.findOne({token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwc2lkIjoiMjExOTczNDY5MTQyNDM2NiIsImlhdCI6MTU0NTA4NTUyNSwiZXhwIjoxNTQ1MDkyNzI1fQ.b1pvrQ83TIS0JekTU-XEEYEC45OEoxM2JvqR2VYwSK8'}, (err, record) => {
+  //   res.json(record);
+  // });
 });
 
 // Accepts POST requests at the /webhook endpoint
@@ -65,6 +87,7 @@ app.post('/webhook', (req, res) => {
   }
 });
 
+// Open to webhook verification requests
 app.get('/webhook', (req, res) => {
   const VERIFY_TOKEN = process.env.TOKEN;
 
@@ -84,99 +107,168 @@ app.get('/webhook', (req, res) => {
 
 app.get('/options', (req, res) => {
   let referer = req.get('Referer');
-  if (referer) {
-    if (referer.indexOf('www.messenger.com') >= 0) {
-      res.setHeader('X-Frame-Options', 'ALLOW-FROM https://www.messenger.com/');
-    } else if (referer.indexOf('www.facebook.com') >= 0) {
-      res.setHeader('X-Frame-Options', 'ALLOW-FROM https://www.facebook.com/');
+  const { access } = req.query;
+  console.log('request made')
+  TokenModel.findOne({
+    token: access
+  }, {
+    target: 1
+  }, (err, auth) => {
+    if (err) {
+      console.log(err);
+      res.render('error', {
+        content: {
+          err_msg: "There is an error on our side, please try again later."
+        }
+      });
+    } else if (auth) {
+      console.log('authed')
+      // When we are going to load the UI page, we only verify the existance of the token. 
+      jwt.verify(access, JWT_CERT, (err) => {
+        if (err) {
+          console.log(err);
+          res.render('error', {
+            content: {
+              err_msg: "Your token is invalid, please create a new link through Messenger."
+            }
+          });
+        } else if (auth.target === 'NEW_PARTY') {
+          if (referer) {
+            if (referer.indexOf('www.messenger.com') >= 0) {
+              res.setHeader('X-Frame-Options', 'ALLOW-FROM https://www.messenger.com/');
+            } else if (referer.indexOf('www.facebook.com') >= 0) {
+              res.setHeader('X-Frame-Options', 'ALLOW-FROM https://www.facebook.com/');
+            }
+            const content = {
+              token: access
+            }
+            res.render('partyoptions', {
+              content
+            });
+          }
+        }
+      });
+    } else {
+      console.log('no token found')
+      res.render('error', {
+        content: {
+          err_msg: "You do not have permission to create a new party, please request a new link through Messenger."
+        }
+      });
     }
-    res.sendFile('public/options.html', {
-      root: __dirname
-    });
-  }
+  });
 });
 
 app.get('/optionspostback', (req, res) => {
   let body = req.query;
-  _.mapObject(body,(val, key) => {
-    if (key !== 'note' && val.length == 0) {
-      console.log('Bad Input');
-      callSendAPI(body.psid, `We failed to create your party because you didnt input "${key}" correctly.`);
-      return;
-    }
-  });
-  const partyInstance = new PartyModel({
-    name: body.name,
-    location: body.location,
-    date: body.date,
-    budget: parseFloat(body.budget).toFixed(2),
-    owner: body.psid,
-    participants: [
-      body.psid
-    ],
-    gifting: [],
-    note: body.note
-  });
-  partyInstance.save((err, partyInfo) => {
-    if (err) {
-      console.log(err)
+  // Validate Token
+  TokenModel.findOne({token: body.token}, (mongoerr, tokenRecord) => {
+    if (mongoerr) {
+      callSendAPI(body.psid, `We failed to create your party because of a server error, please try again in a bit.`);
+    } else if (!tokenRecord) {
+      callSendAPI(body.psid, `We failed to create your party because your token is not found.`);
     } else {
-      checkIfUserAlreadyRegistered(body.psid, (err, found) => {
-        if (err) {
-          console.error('An error occurred with the database: ', err);
-          res.status(500).send('Server Error. This is our fault, give us some time to resolve it.');
-        } else if (found) {
-          // if found
-          UserModel.findOneAndUpdate({
-            _id: found._id
-          }, {
-            $addToSet: {
-              parties: partyInfo._id
-            }
-          }, (err, data) => {
+      jwt.verify(body.token, JWT_CERT, (err, decoded) => {
+        if(err) {
+          // If decoding failed
+          console.log(err);
+          callSendAPI(body.psid, `We failed to create your party because your token is invalid or expired.`);
+        } else if(decoded.psid !== body.psid) {
+          // If user does not match
+          callSendAPI(body.psid, `We failed to create your party because your token is invalid.`)
+        } else {
+          // No issues with token authenticity
+          TokenModel.findOneAndDelete({token: body.token}, (err, record) => {
             if (err) {
-              console.error('An error occurred with the database: ', err);
-              res.status(500).send('Server Error. This is our fault, give us some time to resolve it.');
-            } else {
-              console.log('Update Success', data);
-              let response = afterPartyCreation(body, partyInfo._id);
-              res.status(200).send('Please close this window to return to the conversation thread.');
-              callSendAPI(body.psid, response);
+              console.log(err);
+            }
+          }); // Remove token
+          // Validate Input
+          _.mapObject(body, (val, key) => {
+            if (key !== 'note' && val.length == 0) {
+              console.log('Bad Input detected');
+              callSendAPI(body.psid, `We failed to create your party because you didnt input "${key}" correctly.`);
+              return;
             }
           });
-        } else {
-          getUserInfoFromGraph(body.psid, (err, userInfo) => {
+          // Create database connection instance
+          const partyInstance = new PartyModel({
+            name: body.name,
+            location: body.location,
+            date: body.date,
+            budget: parseFloat(body.budget).toFixed(2),
+            owner: body.psid,
+            participants: [
+              body.psid
+            ],
+            gifting: [],
+            note: body.note
+          });
+          // Save into database
+          partyInstance.save((err, partyInfo) => {
             if (err) {
-              console.error('An error occurred with the database: ', err);
-              res.status(500).send('Server Error. This is our fault, give us some time to resolve it.');
+              console.log(err)
             } else {
-              const userInstance = new UserModel({
-                name: userInfo.name,
-                first_name: userInfo.first_name,
-                last_name: userInfo.last_name,
-                profile: userInfo.profile_pic,
-                psid: userInfo.id,
-                parties: [partyInfo._id],
-                wishlist: [],
-                recipients: []
-              });
-              userInstance.save((err, data) => {
+              checkIfUserAlreadyRegistered(body.psid, (err, found) => {
                 if (err) {
                   console.error('An error occurred with the database: ', err);
                   res.status(500).send('Server Error. This is our fault, give us some time to resolve it.');
+                } else if (found) {
+                  // if found
+                  UserModel.findOneAndUpdate({
+                    _id: found._id
+                  }, {
+                    $addToSet: {
+                      parties: partyInfo._id
+                    }
+                  }, (err, data) => {
+                    if (err) {
+                      console.error('An error occurred with the database: ', err);
+                      res.status(500).send('Server Error. This is our fault, give us some time to resolve it.');
+                    } else {
+                      console.log('Update Success', data);
+                      let response = afterPartyCreation(body, partyInfo._id);
+                      res.status(200).send('Please close this window to return to the conversation thread.');
+                      callSendAPI(body.psid, response);
+                    }
+                  });
                 } else {
-                  console.log('Success', data);
-                  let response = afterPartyCreation(body, partyInfo._id);
-                  res.status(200).send('Please close this window to return to the conversation thread.');
-                  callSendAPI(body.psid, response);
+                  getUserInfoFromGraph(body.psid, (err, userInfo) => {
+                    if (err) {
+                      console.error('An error occurred with the database: ', err);
+                      res.status(500).send('Server Error. This is our fault, give us some time to resolve it.');
+                    } else {
+                      const userInstance = new UserModel({
+                        name: userInfo.name,
+                        first_name: userInfo.first_name,
+                        last_name: userInfo.last_name,
+                        profile: userInfo.profile_pic,
+                        psid: userInfo.id,
+                        parties: [partyInfo._id],
+                        wishlist: [],
+                        recipients: []
+                      });
+                      userInstance.save((err, data) => {
+                        if (err) {
+                          console.error('An error occurred with the database: ', err);
+                          res.status(500).send('Server Error. This is our fault, give us some time to resolve it.');
+                        } else {
+                          console.log('Success', data);
+                          let response = afterPartyCreation(body, partyInfo._id);
+                          res.status(200).send('Please close this window to return to the conversation thread.');
+                          callSendAPI(body.psid, response);
+                        }
+                      })
+                    }
+                  });
                 }
-              })
+              });
             }
           });
         }
       });
     }
-  });
+  })
 });
 
 app.get('/invitation', (req, res) => {
@@ -189,7 +281,11 @@ app.get('/invitation', (req, res) => {
   }, (err, party_data) => {
     UserModel.findOne({
       psid: party_data.owner
-    }, {profile: 1, psid: 1, name: 1}, (err, owner_data) => {
+    }, {
+      profile: 1,
+      psid: 1,
+      name: 1
+    }, (err, owner_data) => {
       UserModel.find({
         parties: party_data._id
       }, (err, participants) => {
@@ -218,10 +314,15 @@ app.get('/invitationpostback', (req, res) => {
   let body = req.query;
   PartyModel.findOne({
     _id: body.party_id
-  }, {participants: 1, name: 1}, (err, party) => {
+  }, {
+    participants: 1,
+    name: 1
+  }, (err, party) => {
     if (party.participants.includes(body.psid)) {
       console.log("Already Joined");
-      callSendAPI(body.psid, {text: `You are already a member of ${party.name}!`})
+      callSendAPI(body.psid, {
+        text: `You are already a member of ${party.name}!`
+      })
       return;
     }
     PartyModel.findOneAndUpdate({
@@ -305,7 +406,11 @@ app.get('/partydetails', (req, res) => {
   }, (err, party_data) => {
     UserModel.findOne({
       psid: party_data.owner
-    }, {profile: 1, psid: 1, name: 1}, (err, owner_data) => {
+    }, {
+      profile: 1,
+      psid: 1,
+      name: 1
+    }, (err, owner_data) => {
       UserModel.find({
         parties: party_data._id
       }, (err, participants) => {
@@ -334,7 +439,9 @@ app.get('/partymanagement', (req, res) => {
   const body = req.query;
   switch (body.action) {
     case 'DELETE':
-      PartyModel.findOneAndDelete({_id: body.party_id}, (err, result) => {
+      PartyModel.findOneAndDelete({
+        _id: body.party_id
+      }, (err, result) => {
         if (err) {
           console.log(err);
           callSendAPI(body.psid, {
@@ -348,7 +455,9 @@ app.get('/partymanagement', (req, res) => {
       })
       break;
     case 'DELETE_USER':
-      UserModel.findOneAndDelete({psid: body.psid}, (err, userInfo) => {
+      UserModel.findOneAndDelete({
+        psid: body.psid
+      }, (err, userInfo) => {
         if (err) {
           console.log(err);
           callSendAPI(body.psid, {
@@ -362,7 +471,15 @@ app.get('/partymanagement', (req, res) => {
             });
           }
           // Remove user from all unstarted parties that contain the user
-          PartyModel.update({gifting: {$size: 0}},{$pull: {participants: body.psid}});
+          PartyModel.update({
+            gifting: {
+              $size: 0
+            }
+          }, {
+            $pull: {
+              participants: body.psid
+            }
+          });
           callSendAPI(body.psid, {
             text: `We have removed your profile from our database. Delete this conversation to completely remove your account. It's sad to see you go, good luck in the future! :^)`
           });
@@ -373,14 +490,18 @@ app.get('/partymanagement', (req, res) => {
 
 app.get('/profile', (req, res) => {
   let referer = req.get('Referer');
-  let { psid } = req.query
+  let {
+    psid
+  } = req.query
   if (referer) {
     if (referer.indexOf('www.messenger.com') >= 0) {
       res.setHeader('X-Frame-Options', 'ALLOW-FROM https://www.messenger.com/');
     } else if (referer.indexOf('www.facebook.com') >= 0) {
       res.setHeader('X-Frame-Options', 'ALLOW-FROM https://www.facebook.com/');
     }
-    UserModel.findOne({psid}, (err, user) => {
+    UserModel.findOne({
+      psid
+    }, (err, user) => {
       res.render('profile', {
         user
       });
@@ -444,21 +565,30 @@ app.get('/startparty', (req, res) => {
   });
 });
 
-app.get('/startpartypostback',(req, res) => {
-  const { party_id, psid } = req.query;
-  PartyModel.findOne({_id: party_id}, (err, partyInfo) => {
+app.get('/startpartypostback', (req, res) => {
+  const {
+    party_id,
+    psid
+  } = req.query;
+  PartyModel.findOne({
+    _id: party_id
+  }, (err, partyInfo) => {
     if (partyInfo.gifting.length > 0) {
       console.log("Game Already Started");
-      callSendAPI(psid, {text: "You have already started the party!"});
+      callSendAPI(psid, {
+        text: "You have already started the party!"
+      });
       return;
     }
-    const { participants } = partyInfo;
+    const {
+      participants
+    } = partyInfo;
     let gifting = [];
     let recipients = [];
     _.map(participants, (participant) => {
       let pool = participants.slice(0);
       pool.splice(pool.indexOf(participant), 1);
-      pool = _.difference(pool,recipients);
+      pool = _.difference(pool, recipients);
       let recipient;
       if (pool.length === 0) {
         recipient = recipients[Math.floor(Math.random() * recipients.length)];
@@ -471,20 +601,38 @@ app.get('/startpartypostback',(req, res) => {
         to: recipient
       })
     });
-    PartyModel.findOneAndUpdate({_id: party_id}, { gifting }, (err, newParty) => {
-      if (err) {
-      } else {
+    PartyModel.findOneAndUpdate({
+      _id: party_id
+    }, {
+      gifting
+    }, (err, newParty) => {
+      if (err) {} else {
         _.map(gifting, (pair) => {
-          UserModel.findOneAndUpdate({psid: pair.from}, {$addToSet: {recipients: {id: pair.to, party_id}}}, (err) => {
+          UserModel.findOneAndUpdate({
+            psid: pair.from
+          }, {
+            $addToSet: {
+              recipients: {
+                id: pair.to,
+                party_id
+              }
+            }
+          }, (err) => {
             if (err) {
               console.log(err)
             } else {
-              UserModel.findOne({psid: pair.to}, {name: 1}, (err, getter) => {
+              UserModel.findOne({
+                psid: pair.to
+              }, {
+                name: 1
+              }, (err, getter) => {
                 if (err) {
                   console.log(err)
                 } else {
                   console.log(pair.to, getter.name);
-                  callSendAPI(pair.from, {text: `Your secret santa recipient has been assigned! You will be getting a gift for: ${getter.name}`});
+                  callSendAPI(pair.from, {
+                    text: `Your secret santa recipient has been assigned! You will be getting a gift for: ${getter.name}`
+                  });
                 }
               })
             }
@@ -492,7 +640,7 @@ app.get('/startpartypostback',(req, res) => {
         });
       }
     });
-  }) 
+  })
 });
 
 app.get('/help', (req, res) => {
@@ -511,7 +659,7 @@ function handlePostback(sender_psid, postback) {
       });
       break;
     case 'NEW_PARTY':
-      callSendAPI(sender_psid, setRoomPreferences());
+      setRoomPreferences(sender_psid)
       break;
     case 'MY_PARTIES':
       postbackParties(sender_psid);
@@ -520,9 +668,15 @@ function handlePostback(sender_psid, postback) {
       postbackRecipients(sender_psid);
       break;
     case 'MY_PROFILE':
-      UserModel.findOne({psid: sender_psid}, {name: 1}, (err, user) => {
+      UserModel.findOne({
+        psid: sender_psid
+      }, {
+        name: 1
+      }, (err, user) => {
         if (err) {
-          callSendAPI(sender_psid, {text: `Failed to retrieve your profile, please try again later`});
+          callSendAPI(sender_psid, {
+            text: `Failed to retrieve your profile, please try again later`
+          });
         } else if (user) {
           callSendAPI(sender_psid, {
             attachment: {
@@ -531,35 +685,38 @@ function handlePostback(sender_psid, postback) {
                 template_type: "button",
                 text: `Hi ${user.name}, click on the button to view your profile.`,
                 buttons: [{
-                    type: "web_url",
-                    url: SERVER_URL + "/profile?psid=" + sender_psid,
-                    title: "My Profile",
-                    webview_height_ratio: 'tall',
-                    messenger_extensions: true
-                  }
-                ]
+                  type: "web_url",
+                  url: SERVER_URL + "/profile?psid=" + sender_psid,
+                  title: "My Profile",
+                  webview_height_ratio: 'tall',
+                  messenger_extensions: true
+                }]
               }
             }
           });
         } else {
-          callSendAPI(sender_psid, {text: `We don't have a profile for you! A profile will be automatically created when you accept an invitation or create a party!`});
+          callSendAPI(sender_psid, {
+            text: `We don't have a profile for you! A profile will be automatically created when you accept an invitation or create a party!`
+          });
         }
       });
       break;
-    
+
   }
 }
 
 function postbackRecipients(sender_psid) {
   UserModel.findOne({
     psid: sender_psid
-  }, {recipients: 1}, (err, user) => {
+  }, {
+    recipients: 1
+  }, (err, user) => {
     if (err) {
       console.log(err)
       callSendAPI(sender_psid, {
         text: "Failed to retrieve your recipients... This is likely our fault. Please try again later."
       });
-    } else if (user){
+    } else if (user) {
       if (user.recipients.length === 0) {
         callSendAPI(sender_psid, {
           text: 'You do not have any recipients. If you are already in a party, please inform the owner to start the party.'
@@ -569,9 +726,18 @@ function postbackRecipients(sender_psid) {
       callSendAPI(sender_psid, {
         text: 'Here are your recipients! (Remember to keep it hush hush!)'
       })
-      _.map(user.recipients, (recipient,i) => {
-        UserModel.findOne({psid: recipient.id}, {name: 1, profile: 1} , (err, person) => {
-          PartyModel.findOne({_id: recipient.party_id}, {name: 1}, (err, partyInfo) => {
+      _.map(user.recipients, (recipient, i) => {
+        UserModel.findOne({
+          psid: recipient.id
+        }, {
+          name: 1,
+          profile: 1
+        }, (err, person) => {
+          PartyModel.findOne({
+            _id: recipient.party_id
+          }, {
+            name: 1
+          }, (err, partyInfo) => {
             callSendAPI(sender_psid, recipientDetailsPrompt(person, partyInfo.name));
           })
         });
@@ -606,44 +772,68 @@ function postbackParties(sender_psid) {
 }
 
 function disbandParty(partyID, reason) {
-  PartyModel.findOne({_id: partyID}, {name:1, participants: 1, gifting: 1}, (err, party) => {
+  PartyModel.findOne({
+    _id: partyID
+  }, {
+    name: 1,
+    participants: 1,
+    gifting: 1
+  }, (err, party) => {
     if (gifting.length === 0) {
       _.map(party.participants, (participant) => {
         callSendAPI(participant, {
           text: `${party.name} has been disbanded! Because: ${reason}.`
         })
       })
-      PartyModel.deleteOne({_id: partyID});
+      PartyModel.deleteOne({
+        _id: partyID
+      });
     }
   })
 }
 
 // Define the template and webview
-function setRoomPreferences() {
-  let response = {
-    attachment: {
-      type: "template",
-      payload: {
-        template_type: "button",
-        "text": "Sounds good, let's get your party going! 🎉🎉",
-        buttons: [{
-            type: "web_url",
-            url: SERVER_URL + "/options",
-            title: "Create Your Party",
-            webview_height_ratio: 'tall',
-            messenger_extensions: true
-          },
-          {
-            type: "web_url",
-            url: SERVER_URL + "/help",
-            title: "What are parties?",
-            webview_height_ratio: 'full',
+function setRoomPreferences(sender_psid) {
+  jwt.sign({
+    psid: sender_psid
+  }, JWT_CERT, {
+    expiresIn: '2h'
+  }, (err, encoded) => {
+    const tokenInstance = new TokenModel({
+      token: encoded,
+      target: 'NEW_PARTY'
+    });
+    tokenInstance.save((err) => {
+      if (err) {
+        console.log('Failed to register token.')
+      } else {
+        let response = {
+          attachment: {
+            type: "template",
+            payload: {
+              template_type: "button",
+              "text": "Sounds good, let's get your party going! 🎉🎉 \n(Please note this link will expire in 2 hours)",
+              buttons: [{
+                  type: "web_url",
+                  url: SERVER_URL + "/options?access=" + encoded,
+                  title: "Create Your Party",
+                  webview_height_ratio: 'tall',
+                  messenger_extensions: true
+                },
+                {
+                  type: "web_url",
+                  url: SERVER_URL + "/help",
+                  title: "What are parties?",
+                  webview_height_ratio: 'full',
+                }
+              ]
+            }
           }
-        ]
+        };
+        callSendAPI(sender_psid, response);
       }
-    }
-  };
-  return response;
+    })
+  })
 }
 
 function afterPartyCreation(body, party_id) {
@@ -690,15 +880,13 @@ function afterPartyCreation(body, party_id) {
 
 function partyDetailsPrompt(party) {
   // If party already started
-  let buttons = [
-    {
-      type: 'web_url',
-      url: SERVER_URL + '/partydetails?party_id=' + party._id,
-      messenger_extensions: true,
-      title: "More Details",
-      webview_height_ratio: 'tall'
-    }
-  ]
+  let buttons = [{
+    type: 'web_url',
+    url: SERVER_URL + '/partydetails?party_id=' + party._id,
+    messenger_extensions: true,
+    title: "More Details",
+    webview_height_ratio: 'tall'
+  }]
   if (party.gifting.length === 0) {
     const body = party;
     buttons.push({
@@ -790,9 +978,12 @@ function getUserInfoFromGraph(psid, callback) {
       if (userInfo.id) {
         callback(null, userInfo);
       } else {
-        callback({message: "Failed to retrieve user profile from facebook", code: 1}, null)
+        callback({
+          message: "Failed to retrieve user profile from facebook",
+          code: 1
+        }, null)
       }
-      
+
     }
   });
 }

@@ -1,0 +1,47 @@
+<html>
+
+<head>
+    <title>Oops</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="/stylesheets/style.css">
+    <link rel="stylesheet" href="/stylesheets/core.css">
+</head>
+
+<body>
+    <div class="container flexed v-center full-height">
+        <div class="inner">
+            <h2 class="text-centered mb-25">Something went wrong...</h2>
+            <p class="text-muted text-centered"><%= content.err_msg %></p>
+            <div class="weui-btn-area">
+                <button class="weui-btn weui-btn_default" id="close">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
+        crossorigin="anonymous"></script>
+    <script>
+        (function (d, s, id) {
+            var js, fjs = d.getElementsByTagName(s)[0];
+            if (d.getElementById(id)) {
+                return;
+            }
+            js = d.createElement(s);
+            js.id = id;
+            js.src = "//connect.facebook.com/en_US/messenger.Extensions.js";
+            fjs.parentNode.insertBefore(js, fjs);
+        }(document, 'script', 'Messenger'));
+
+        window.extAsyncInit = () => {
+            document.getElementById('close').addEventListener('click', () => {
+                MessengerExtensions.requestCloseBrowser(function success() {
+                    console.log("Webview closing");
+                }, function error(err) {
+                    console.log(err);
+                });
+            });
+        };
+    </script>
+</body>
+
+</html>
