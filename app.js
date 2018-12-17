@@ -8,6 +8,7 @@ const
   mongoose = require('mongoose'),
   _ = require('underscore'),
   jwt = require('jsonwebtoken'),
+  helmet = require('helmet'),
   dotenv = require('dotenv').config();
 
 // Import database models
@@ -24,6 +25,7 @@ app.set('view engine', 'ejs');
 app.set('port', process.env.PORT || 5000);
 app.use(body_parser.json());
 app.use(express.static('public'));
+app.use(helmet());
 
 // Define environmental process variables
 const PAGE_ACCESS_TOKEN = process.env.PAGE_ACCESS_TOKEN;
