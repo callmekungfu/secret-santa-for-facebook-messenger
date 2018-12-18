@@ -1,0 +1,59 @@
+<html>
+
+<head>
+    <title>Help and More Info</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="/stylesheets/style.css">
+    <link rel="stylesheet" href="/stylesheets/core.css">
+    <script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+    <script>
+        (adsbygoogle = window.adsbygoogle || []).push({
+        google_ad_client: "ca-pub-3456281071378749",
+        enable_page_level_ads: true
+    });
+    </script>
+</head>
+
+<body>
+    <div class="container mt-50">
+        <div class="inner">
+            <div class="profile-container mb-25">
+                <img src="/images/logo.png" class="img-responsive img-profile">
+            </div>
+            <h2 class="text-centered mb-25">Hello!</h2>
+        </div>
+    </div>
+    <div class="weui-btn-area">
+        <button class="weui-btn weui-btn_warn" id="deleteUser">Delete Me From The App</button>
+        <button class="weui-btn weui-btn_default mb-25" id="close">Close</button>
+        <p class="text-muted text-centered footnote">This page details everything the app knows about you. To remove
+            yourself completely from the app, simply click on the button below and delete the conversation in
+            Messenger. (Note: This will remove you from all parties that haven't started yet.)</p>
+    </div>
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
+        crossorigin="anonymous"></script>
+    <script>
+        (function (d, s, id) {
+            var js, fjs = d.getElementsByTagName(s)[0];
+            if (d.getElementById(id)) {
+                return;
+            }
+            js = d.createElement(s);
+            js.id = id;
+            js.src = "//connect.facebook.com/en_US/messenger.Extensions.js";
+            fjs.parentNode.insertBefore(js, fjs);
+        }(document, 'script', 'Messenger'));
+
+        window.extAsyncInit = () => {
+            document.getElementById('close').addEventListener('click', () => {
+                MessengerExtensions.requestCloseBrowser(function success() {
+                    console.log("Webview closing");
+                }, function error(err) {
+                    console.log(err);
+                });
+            });
+        }
+    </script>
+</body>
+
+</html>
