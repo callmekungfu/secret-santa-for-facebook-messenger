@@ -1,4 +1,5 @@
 'use strict';
+
 // Import libraries
 const
   request = require('request'),
@@ -9,6 +10,7 @@ const
   _ = require('underscore'),
   jwt = require('jsonwebtoken'),
   helmet = require('helmet'),
+  messages = require('./lib/messenger-template-builder'),
   dotenv = require('dotenv').config();
 
 // Import database models
@@ -221,7 +223,7 @@ app.get('/optionspostback', (req, res) => {
                       res.status(500).send('Server Error. This is our fault, give us some time to resolve it.');
                     } else {
                       console.log('Update Success', data);
-                      let response = afterPartyCreation(body, partyInfo._id);
+                      let response = messages.afterPartyCreation(body, partyInfo._id);
                       res.status(200).send('Please close this window to return to the conversation thread.');
                       callSendAPI(body.psid, response);
                     }
@@ -248,7 +250,7 @@ app.get('/optionspostback', (req, res) => {
                           res.status(500).send('Server Error. This is our fault, give us some time to resolve it.');
                         } else {
                           console.log('Success', data);
-                          let response = afterPartyCreation(body, partyInfo._id);
+                          let response = messages.afterPartyCreation(body, partyInfo._id);
                           res.status(200).send('Please close this window to return to the conversation thread.');
                           callSendAPI(body.psid, response);
                         }
@@ -762,7 +764,7 @@ function postbackRecipients(sender_psid) {
           }, {
             name: 1
           }, (err, partyInfo) => {
-            callSendAPI(sender_psid, recipientDetailsPrompt(person, partyInfo.name));
+            callSendAPI(sender_psid, messages.recipientDetailsPrompt(person, partyInfo.name));
           })
         });
       });
@@ -785,7 +787,7 @@ function postbackParties(sender_psid) {
       });
     } else if (parties.length > 0) {
       _.map(parties, (party) => {
-        callSendAPI(sender_psid, partyDetailsPrompt(party));
+        callSendAPI(sender_psid, messages.partyDetailsPrompt(party));
       });
     } else {
       callSendAPI(sender_psid, {
@@ -858,139 +860,6 @@ function setRoomPreferences(sender_psid) {
       }
     })
   })
-}
-
-function afterPartyCreation(body, party_id) {
-  let response = {
-    attachment: {
-      type: "template",
-      payload: {
-        template_type: "button",
-        text: `Yay! Your ${body.name} party is on its way! Here are the details: \n\nLocation: ${body.location}\nDate: ${moment(body.date).format('MMMM Do YYYY, h:mm a')}\nBudget: $${body.budget}\n\nInvite your friends now! When You are ready, go to My Account > My Parties and click <Start Party>`,
-        buttons: [{
-          type: "element_share",
-          share_contents: {
-            attachment: {
-              type: "template",
-              payload: {
-                template_type: 'generic',
-                elements: [{
-                  title: `You are invited to ${body.name} Party!`,
-                  subtitle: `More Details:\n\nLocation: ${body.location}\nDate:${moment(body.date).format('MMMM Do YYYY, h:mm a')}\nBudget:$${body.budget}\n\nJoin Now!`,
-                  image_url: 'https://picsum.photos/400/600',
-                  default_action: {
-                    type: 'web_url',
-                    url: SERVER_URL + `/invitation?party_id=` + party_id,
-                    messenger_extensions: true,
-                    webview_height_ratio: 'tall'
-                  },
-                  buttons: [{
-                    type: "web_url",
-                    title: "Join Now!",
-                    url: SERVER_URL + '/invitation?party_id=' + party_id,
-                    messenger_extensions: true,
-                    webview_height_ratio: 'tall'
-                  }]
-                }]
-              }
-            }
-          }
-        }]
-      }
-    }
-  };
-  return response;
-}
-
-function partyDetailsPrompt(party) {
-  // If party already started
-  let buttons = [{
-    type: 'web_url',
-    url: SERVER_URL + '/partydetails?party_id=' + party._id,
-    messenger_extensions: true,
-    title: "More Details",
-    webview_height_ratio: 'tall'
-  }]
-  if (party.gifting.length === 0) {
-    const body = party;
-    buttons.push({
-      type: "element_share",
-      share_contents: {
-        attachment: {
-          type: "template",
-          payload: {
-            template_type: 'generic',
-            elements: [{
-              title: `You are invited to ${body.name} Party!`,
-              subtitle: `More Details:\n\nLocation: ${body.location}\nDate:${moment(body.date).format('MMMM Do YYYY, h:mm a')}\nBudget:$${body.budget}\n\nJoin Now!`,
-              default_action: {
-                type: 'web_url',
-                url: SERVER_URL + `/invitation?party_id=` + party._id,
-                messenger_extensions: true,
-                webview_height_ratio: 'tall'
-              },
-              buttons: [{
-                type: "web_url",
-                title: "Join Now!",
-                url: SERVER_URL + '/invitation?party_id=' + party._id,
-                messenger_extensions: true,
-                webview_height_ratio: 'tall'
-              }]
-            }]
-          }
-        }
-      }
-    }, {
-      type: "web_url",
-      title: "Start Party!",
-      url: SERVER_URL + '/startparty?party_id=' + party._id,
-      messenger_extensions: true,
-      webview_height_ratio: 'tall'
-    })
-  }
-  return {
-    attachment: {
-      type: "template",
-      payload: {
-        template_type: 'generic',
-        elements: [{
-          title: `${party.name}`,
-          image_url: 'https://picsum.photos/400/600',
-          subtitle: `Date: ${moment(party.date).format('MMMM Do YYYY, h:mm a')}\nThere are currently ${party.participants.length-1} friends in the party.`,
-          default_action: {
-            type: 'web_url',
-            url: SERVER_URL + '/partydetails?party_id=' + party._id,
-            messenger_extensions: true,
-            webview_height_ratio: 'tall'
-          },
-          buttons
-        }]
-      }
-    }
-  };
-}
-
-function recipientDetailsPrompt(user, party) {
-  let wishlist = '';
-  _.map(user.wishlist, (item) => {
-    wishlist += `- ${item}\n`
-  });
-  if (user.wishlist.length === 0) {
-    wishlist = 'User Doesn\'t have a wishlist yet'
-  }
-  return {
-    attachment: {
-      type: "template",
-      payload: {
-        template_type: 'generic',
-        elements: [{
-          title: `${user.name}`,
-          image_url: user.profile,
-          subtitle: `${party}\n\nWishlist: \n${wishlist}`,
-        }]
-      }
-    }
-  };
 }
 
 function getUserInfoFromGraph(psid, callback) {
