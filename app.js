@@ -975,6 +975,9 @@ function recipientDetailsPrompt(user, party) {
   _.map(user.wishlist, (item) => {
     wishlist += `- ${item}\n`
   });
+  if (user.wishlist.length === 0) {
+    wishlist = 'User Doesn\'t have a wishlist yet'
+  }
   return {
     attachment: {
       type: "template",
@@ -982,9 +985,8 @@ function recipientDetailsPrompt(user, party) {
         template_type: 'generic',
         elements: [{
           title: `${user.name}`,
-          subtitle: `Wishlist: \n${wishlist}`,
           image_url: user.profile,
-          subtitle: party,
+          subtitle: `${party}\n\nWishlist: \n${wishlist}`,
         }]
       }
     }
