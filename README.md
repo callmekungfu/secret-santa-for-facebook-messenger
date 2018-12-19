@@ -19,6 +19,7 @@ Here is a list of technologies I used to accomplish this project (Rank by whatev
 - HTML, CSS, jQuery
 - VS Code, Github
 - WeUI
+- Json Web Tokens
 
 ## Limitation (Important)
 All users joining the party must have facebook chat enabled. Otherwise they will not recieve any system notifications.
@@ -35,15 +36,19 @@ All users joining the party must have facebook chat enabled. Otherwise they will
 - API tokenization
 - Profiles
 - Help and more informations
+- Wishlists!
 - No bugss!
 
 ### Version 2.0
-- Wishlists!
+- Shift to a more modern frontend framework
 - Party Announcements! (No clue why this is necessary)
 - Gift recommendation based on wishlists!
 
+### Version 2.5
+- Customized Party rules (gift exchange, etc.)
+
 ## Special Thanks
-Special thanks to my friends for inspiring me with this project, this one is for you guys:
+Special thanks to my friends for inspiring me, this one is for you guys:
 - Ivy Ma
 - Anthony Lai
 - Andrew Prathepan
