@@ -57,8 +57,7 @@ app.listen(app.get('port'), () => {
 module.exports = app;
 
 // Testing method, should be emptied in production environment
-app.get('/testing', (req, res) => {
-});
+app.get('/testing', (req, res) => {});
 
 // Accepts POST requests at the /webhook endpoint
 app.post('/webhook', (req, res) => {
@@ -103,7 +102,9 @@ app.get('/webhook', (req, res) => {
 
 app.get('/options', (req, res) => {
   let referer = req.get('Referer');
-  const { access } = req.query;
+  const {
+    access
+  } = req.query;
   console.log('request made')
   TokenModel.findOne({
     token: access
@@ -158,23 +159,27 @@ app.get('/options', (req, res) => {
 app.get('/optionspostback', (req, res) => {
   let body = req.query;
   // Validate Token
-  TokenModel.findOne({token: body.token}, (mongoerr, tokenRecord) => {
+  TokenModel.findOne({
+    token: body.token
+  }, (mongoerr, tokenRecord) => {
     if (mongoerr) {
       callSendAPI(body.psid, `We failed to create your party because of a server error, please try again in a bit.`);
     } else if (!tokenRecord) {
       callSendAPI(body.psid, `We failed to create your party because your token is not found.`);
     } else {
       jwt.verify(body.token, JWT_CERT, (err, decoded) => {
-        if(err) {
+        if (err) {
           // If decoding failed
           console.log(err);
           callSendAPI(body.psid, `We failed to create your party because your token is invalid or expired.`);
-        } else if(decoded.psid !== body.psid) {
+        } else if (decoded.psid !== body.psid) {
           // If user does not match
           callSendAPI(body.psid, `We failed to create your party because your token is invalid.`)
         } else {
           // No issues with token authenticity
-          TokenModel.findOneAndDelete({token: body.token}, (err, record) => {
+          TokenModel.findOneAndDelete({
+            token: body.token
+          }, (err, record) => {
             if (err) {
               console.log(err);
             }
@@ -272,26 +277,27 @@ app.get('/invitation', (req, res) => {
   let {
     party_id
   } = req.query;
-  PartyModel.findOne({
-    _id: party_id
-  }, (err, party_data) => {
-    UserModel.findOne({
-      psid: party_data.owner
-    }, {
-      profile: 1,
-      psid: 1,
-      name: 1
-    }, (err, owner_data) => {
-      UserModel.find({
-        parties: party_data._id
-      }, (err, participants) => {
-        party_data.date = moment(party_data.date).format('MMMM Do YYYY [at] h:mm a')
-        const content = {
-          party: party_data,
-          owner: owner_data,
-          participants
-        }
-        if (referer) {
+  if (referer) {
+    PartyModel.findOne({
+      _id: party_id
+    }, (err, party_data) => {
+      UserModel.findOne({
+        psid: party_data.owner
+      }, {
+        profile: 1,
+        psid: 1,
+        name: 1
+      }, (err, owner_data) => {
+        UserModel.find({
+          parties: party_data._id
+        }, (err, participants) => {
+          party_data.date = moment(party_data.date).format('MMMM Do YYYY [at] h:mm a')
+          const content = {
+            party: party_data,
+            owner: owner_data,
+            participants
+          }
+
           if (referer.indexOf('www.messenger.com') >= 0) {
             res.setHeader('X-Frame-Options', 'ALLOW-FROM https://www.messenger.com/');
           } else if (referer.indexOf('www.facebook.com') >= 0) {
@@ -300,10 +306,17 @@ app.get('/invitation', (req, res) => {
           res.render('invitation', {
             content
           });
-        }
-      })
+
+        })
+      });
     });
-  });
+  } else {
+    res.render('error', {
+      content: {
+        err_msg: "Please access this site using the facebook bot."
+      }
+    });
+  }
 });
 
 app.get('/invitationpostback', (req, res) => {
@@ -397,26 +410,26 @@ app.get('/partydetails', (req, res) => {
   let {
     party_id
   } = req.query;
-  PartyModel.findOne({
-    _id: party_id
-  }, (err, party_data) => {
-    UserModel.findOne({
-      psid: party_data.owner
-    }, {
-      profile: 1,
-      psid: 1,
-      name: 1
-    }, (err, owner_data) => {
-      UserModel.find({
-        parties: party_data._id
-      }, (err, participants) => {
-        party_data.date = moment(party_data.date).format('MMMM Do YYYY [at] h:mm a')
-        const content = {
-          party: party_data,
-          owner: owner_data,
-          participants
-        }
-        if (referer) {
+  if (referer) {
+    PartyModel.findOne({
+      _id: party_id
+    }, (err, party_data) => {
+      UserModel.findOne({
+        psid: party_data.owner
+      }, {
+        profile: 1,
+        psid: 1,
+        name: 1
+      }, (err, owner_data) => {
+        UserModel.find({
+          parties: party_data._id
+        }, (err, participants) => {
+          party_data.date = moment(party_data.date).format('MMMM Do YYYY [at] h:mm a')
+          const content = {
+            party: party_data,
+            owner: owner_data,
+            participants
+          }
           if (referer.indexOf('www.messenger.com') >= 0) {
             res.setHeader('X-Frame-Options', 'ALLOW-FROM https://www.messenger.com/');
           } else if (referer.indexOf('www.facebook.com') >= 0) {
@@ -425,10 +438,10 @@ app.get('/partydetails', (req, res) => {
           res.render('partydetails.ejs', {
             content
           });
-        }
-      })
+        })
+      });
     });
-  });
+  }
 });
 
 app.get('/partymanagement', (req, res) => {
@@ -481,6 +494,9 @@ app.get('/partymanagement', (req, res) => {
           });
         }
       });
+      break;
+    default:
+      res.json({err: 'Action is not available.'})
   }
 });
 
@@ -507,25 +523,33 @@ app.get('/profile', (req, res) => {
 
 app.get('/wishlist', (req, res) => {
   const body = req.query;
-  switch(body.action) {
+  switch (body.action) {
     case 'ADD':
-      UserModel.findOneAndUpdate({psid: body.psid}, {$push: {
-        wishlist: {
-          name: body.name,
-          id: body.id
+      UserModel.findOneAndUpdate({
+        psid: body.psid
+      }, {
+        $push: {
+          wishlist: {
+            name: body.name,
+            id: body.id
+          }
         }
-      }}, (err, results) => {
+      }, (err, results) => {
         if (err) {
           console.log(err);
         }
       })
       break;
     case 'REMOVE':
-      UserModel.findOneAndUpdate({psid: body.psid}, {$pull: {
-        wishlist: {
-          id: body.id
+      UserModel.findOneAndUpdate({
+        psid: body.psid
+      }, {
+        $pull: {
+          wishlist: {
+            id: body.id
+          }
         }
-      }}, (err, results) => {
+      }, (err, results) => {
         if (err) {
           console.log(err);
         }
