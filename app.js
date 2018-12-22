@@ -788,7 +788,14 @@ function postbackRecipients(sender_psid) {
           }, {
             name: 1
           }, (err, partyInfo) => {
-            callSendAPI(sender_psid, messages.recipientDetailsPrompt(person, partyInfo.name));
+            if (err) {
+              callSendAPI(sender_psid, messages.recipientDetailsPrompt(person, "Failed to load user party."));
+              console.log(err)
+            } else if (partyInfo) {
+              callSendAPI(sender_psid, messages.recipientDetailsPrompt(person, partyInfo.name));
+            } else {
+              callSendAPI(sender_psid, messages.recipientDetailsPrompt(person, "The party has disbanded."));
+            }
           })
         });
       });

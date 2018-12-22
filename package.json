@@ -19,6 +19,7 @@
     "moment": "^2.22.2",
     "mongoose": "^5.3.11",
     "morgan": "~1.9.0",
+    "npm": "^6.5.0",
     "request": "^2.88.0",
     "underscore": "^1.9.1"
   },
